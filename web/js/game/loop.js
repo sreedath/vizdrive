@@ -5,6 +5,8 @@ import * as THREE from "three";
 import { loadConstants, loadTrack } from "../sim/constants.js";
 import { stepCar } from "../sim/car.js";
 import { WallCollider } from "../sim/collision.js";
+import { Lidar } from "../sim/lidar.js";
+import { LidarViz } from "../scene/lidarViz.js";
 import { buildTrackMeshes } from "../scene/trackMesh.js";
 import { buildCity } from "../scene/city.js";
 import { buildCarMesh, placeCarMesh } from "../scene/carMesh.js";
@@ -33,6 +35,8 @@ async function main() {
   scene.add(humanMesh);
 
   const collider = new WallCollider(track, C);
+  const lidar = new Lidar(track, C);
+  const lidarViz = new LidarViz(scene, C);
   const input = new Input();
   const hud = new Hud(NUM_LAPS);
   const race = new RaceManager(track, NUM_LAPS);
@@ -127,6 +131,13 @@ async function main() {
     if (dh < -Math.PI) dh += 2 * Math.PI;
     const ih = humanPrev.heading + dh * alpha;
     placeCarMesh(humanMesh, ix, iz, ih);
+
+    if (input.consumeLidarToggle()) {
+      lidarViz.toggle();
+    }
+    if (lidarViz.lines.visible) {
+      lidarViz.update(ix, iz, ih, lidar.scan(ix, iz, ih));
+    }
 
     chaseCam.update(ix, iz, ih, human.speed, dt);
     hud.updateDriving(human.speed, race, "human");

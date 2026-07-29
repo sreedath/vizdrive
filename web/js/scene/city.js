@@ -164,8 +164,18 @@ export function buildCity(track) {
       const d2 = dx * dx + dz * dz;
       if (d2 < minWall2) minWall2 = d2;
     }
-    // Keep trees in a band near the track but off the road.
-    if (minWall2 < 3.5 * 3.5 || minWall2 > 45 * 45) continue;
+    // Never on the road: stay clear of the centerline by half-width + margin.
+    let minCenter2 = Infinity;
+    for (const [cx, cz] of track.centerline) {
+      const dx = x - cx;
+      const dz = z - cz;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < minCenter2) minCenter2 = d2;
+    }
+    const roadClear = track.half_width + 3.0;
+    if (minCenter2 < roadClear * roadClear) continue;
+    // Keep trees in a band near the track.
+    if (minWall2 < 3.0 * 3.0 || minWall2 > 45 * 45) continue;
     let ok = true;
     for (const b of placedBoxes) {
       if (Math.abs(x - b.x) < b.w * 0.6 + 2 && Math.abs(z - b.z) < b.d * 0.6 + 2) {

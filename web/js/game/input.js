@@ -20,6 +20,9 @@ export class Input {
       if (e.code === "KeyR") {
         this.restartPressed = true;
       }
+      if (e.code === "KeyL") {
+        this.lidarToggled = true;
+      }
       if (
         ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
           e.code
@@ -66,6 +69,12 @@ export class Input {
   consumeRestart() {
     const v = this.restartPressed;
     this.restartPressed = false;
+    return v;
+  }
+
+  consumeLidarToggle() {
+    const v = this.lidarToggled;
+    this.lidarToggled = false;
     return v;
   }
 }
