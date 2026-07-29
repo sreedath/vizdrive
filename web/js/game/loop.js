@@ -1,11 +1,12 @@
 // Entry point: loads shared JSON, builds the world, runs the fixed-timestep
-// loop with render interpolation.
+// loop with render interpolation. Human (blue) vs PPO agent (orange).
 
-import * as THREE from "three";
-import { loadConstants, loadTrack } from "../sim/constants.js";
+import { loadConstants, loadTrack, loadJson } from "../sim/constants.js";
 import { stepCar } from "../sim/car.js";
-import { WallCollider } from "../sim/collision.js";
+import { WallCollider, resolveCarCar } from "../sim/collision.js";
 import { Lidar } from "../sim/lidar.js";
+import { ProgressTracker } from "../sim/progress.js";
+import { AgentDriver } from "../agent/agentDriver.js";
 import { LidarViz } from "../scene/lidarViz.js";
 import { buildTrackMeshes } from "../scene/trackMesh.js";
 import { buildCity } from "../scene/city.js";
@@ -20,8 +21,25 @@ const NUM_LAPS = 3;
 const MAX_SUBSTEPS = 5;
 const TOPDOWN_CAR_SCALE = 2.0;
 
+function lerpState(prev, cur, alpha) {
+  let dh = cur.heading - prev.heading;
+  if (dh > Math.PI) dh -= 2 * Math.PI;
+  if (dh < -Math.PI) dh += 2 * Math.PI;
+  return {
+    x: prev.x + (cur.x - prev.x) * alpha,
+    z: prev.z + (cur.z - prev.z) * alpha,
+    heading: prev.heading + dh * alpha,
+  };
+}
+
 async function main() {
   const [C, track] = await Promise.all([loadConstants(), loadTrack()]);
+  let policy = null;
+  try {
+    policy = await loadJson("../shared/policy.json");
+  } catch {
+    console.warn("no policy.json yet: running single-player");
+  }
   document.getElementById("loading").classList.add("hidden");
 
   const canvas = document.getElementById("game-canvas");
@@ -31,15 +49,23 @@ async function main() {
   scene.add(buildTrackMeshes(track));
   scene.add(buildCity(track));
 
-  const humanMesh = buildCarMesh(0x2b6fdd);
-  scene.add(humanMesh);
-
   const collider = new WallCollider(track, C);
   const lidar = new Lidar(track, C);
+  const progress = new ProgressTracker(track);
   const lidarViz = new LidarViz(scene, C);
   const input = new Input();
   const hud = new Hud(NUM_LAPS);
   const race = new RaceManager(track, NUM_LAPS);
+
+  const humanMesh = buildCarMesh(0x2b6fdd);
+  scene.add(humanMesh);
+  let agentMesh = null;
+  let agentDriver = null;
+  if (policy) {
+    agentMesh = buildCarMesh(0xe8720c);
+    scene.add(agentMesh);
+    agentDriver = new AgentDriver(policy, lidar, progress, C);
+  }
 
   const aspect = () => window.innerWidth / window.innerHeight;
   const chaseCam = new ChaseCamera(aspect());
@@ -48,14 +74,25 @@ async function main() {
 
   let human;
   let humanPrev;
+  let agent;
+  let agentPrev;
+  let bannerShown = false;
 
   function resetRace() {
-    const slot = track.grid[0];
-    human = { x: slot.x, z: slot.z, heading: slot.heading, speed: 0.0 };
+    const s0 = track.grid[0];
+    human = { x: s0.x, z: s0.z, heading: s0.heading, speed: 0.0 };
     humanPrev = { ...human };
     race.reset();
     race.addCar("human");
+    if (agentDriver) {
+      const s1 = track.grid[1];
+      agent = { x: s1.x, z: s1.z, heading: s1.heading, speed: 0.0 };
+      agentPrev = { ...agent };
+      agentDriver.reset();
+      race.addCar("agent");
+    }
     hud.hideBanner();
+    bannerShown = false;
     chaseCam.initialized = false;
   }
   resetRace();
@@ -69,26 +106,43 @@ async function main() {
   function physicsTick() {
     const controls = input.sample(C.DT);
     race.tick(C.DT);
-    const driving = race.phase === "racing";
+    const driving = race.phase !== "countdown";
 
     humanPrev = human;
-    const steer = controls.steer;
-    const throttle = driving ? controls.throttle : 0.0;
-    let next = stepCar(human, steer, throttle, C);
-    const res = collider.resolve(next);
-    human = res.state;
+    human = stepCar(
+      human, controls.steer, driving ? controls.throttle : 0.0, C
+    );
+    if (agentDriver) {
+      agentPrev = agent;
+      const a = agentDriver.drive(agent);
+      agent = stepCar(agent, a.steer, driving ? a.throttle : 0.0, C);
+      const cc = resolveCarCar(human, agent, C);
+      human = cc.a;
+      agent = cc.b;
+      agent = collider.resolve(agent).state;
+    }
+    human = collider.resolve(human).state;
 
     race.update("human", humanPrev.x, humanPrev.z, human.x, human.z);
+    if (agentDriver) {
+      race.update("agent", agentPrev.x, agentPrev.z, agent.x, agent.z);
+    }
     race.maybeFinish();
-    if (race.phase === "finished") {
-      const car = race.carState("human");
-      hud.showBanner("FINISHED", [
-        {
-          name: "you",
-          lapTimes: car.lapTimes,
-          total: car.finishTime,
-        },
-      ]);
+    if (race.phase === "finished" && !bannerShown) {
+      bannerShown = true;
+      const h = race.carState("human");
+      const columns = [
+        { name: "you", lapTimes: h.lapTimes, total: h.finishTime },
+      ];
+      let title = "FINISHED";
+      if (agentDriver) {
+        const a = race.carState("agent");
+        columns.push({
+          name: "agent", lapTimes: a.lapTimes, total: a.finishTime,
+        });
+        title = h.finishTime <= a.finishTime ? "YOU WIN" : "YOU LOSE";
+      }
+      hud.showBanner(title, columns);
     }
   }
 
@@ -106,11 +160,16 @@ async function main() {
     }
     if (input.consumeCameraToggle()) {
       activeCam = activeCam === chaseCam ? topCam : chaseCam;
-      // Fog only makes sense from the chase camera; in the map view the car
-      // is scaled up so it stays visible at track scale.
+      // Fog only makes sense from the chase camera; in the map view the cars
+      // are scaled up so they stay visible at track scale.
       const isChase = activeCam === chaseCam;
       scene.fog = isChase ? sceneFog : null;
-      humanMesh.scale.setScalar(isChase ? 1.0 : TOPDOWN_CAR_SCALE);
+      const scale = isChase ? 1.0 : TOPDOWN_CAR_SCALE;
+      humanMesh.scale.setScalar(scale);
+      if (agentMesh) agentMesh.scale.setScalar(scale);
+    }
+    if (input.consumeLidarToggle()) {
+      lidarViz.toggle();
     }
 
     acc += dt;
@@ -122,24 +181,19 @@ async function main() {
     }
     if (steps === MAX_SUBSTEPS) acc = 0.0;
 
-    // Render interpolation between the two most recent physics states.
     const alpha = acc / C.DT;
-    const ix = humanPrev.x + (human.x - humanPrev.x) * alpha;
-    const iz = humanPrev.z + (human.z - humanPrev.z) * alpha;
-    let dh = human.heading - humanPrev.heading;
-    if (dh > Math.PI) dh -= 2 * Math.PI;
-    if (dh < -Math.PI) dh += 2 * Math.PI;
-    const ih = humanPrev.heading + dh * alpha;
-    placeCarMesh(humanMesh, ix, iz, ih);
-
-    if (input.consumeLidarToggle()) {
-      lidarViz.toggle();
+    const hi = lerpState(humanPrev, human, alpha);
+    placeCarMesh(humanMesh, hi.x, hi.z, hi.heading);
+    if (agentMesh) {
+      const ai = lerpState(agentPrev, agent, alpha);
+      placeCarMesh(agentMesh, ai.x, ai.z, ai.heading);
     }
+
     if (lidarViz.lines.visible) {
-      lidarViz.update(ix, iz, ih, lidar.scan(ix, iz, ih));
+      lidarViz.update(hi.x, hi.z, hi.heading, lidar.scan(hi.x, hi.z, hi.heading));
     }
 
-    chaseCam.update(ix, iz, ih, human.speed, dt);
+    chaseCam.update(hi.x, hi.z, hi.heading, human.speed, dt);
     hud.updateDriving(human.speed, race, "human");
     hud.updateCountdown(race);
 
