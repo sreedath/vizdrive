@@ -64,6 +64,17 @@ bash scripts/serve.sh   # then open http://localhost:8000/web/
   -0.5/step wall contact, -3.0 per new contact, -0.02/step time,
   -30 terminal for stuck/reverse.
 
+## Racing custom agents
+
+The arena loads `shared/policy.json` by default. To race any other trained
+model (e.g., a checkpoint), export it to a file and use the "agent" button in
+the top-left of the game to upload it:
+
+```bash
+python3 -m racing.train.export_policy \
+    --model runs/checkpoints/ppo_race_250000_steps --out runs/policy_250k.json
+```
+
 ## Difficulty tuning
 
 Re-export with a throttle handicap to make the agent beatable:
