@@ -12,13 +12,34 @@ import math
 from racing import constants as C
 from racing.track import geometry as geo
 from racing.track.spline import resample_uniform, sample_closed_spline
-from racing.track.waypoints import CONTROL_POINTS, START_HINT
+from racing.track.waypoints import CONTROL_POINTS, START_HINT, TRACKS
 
 MIN_RADIUS_FACTOR = 2.2  # min corner radius > factor * half_width
 
 
-def build_track() -> dict:
-    dense = sample_closed_spline(CONTROL_POINTS, samples_per_segment=60)
+def chaikin(points, iterations):
+    """Closed-polygon corner cutting; each pass rounds every corner by
+    replacing it with two points at 1/4 and 3/4 of the adjacent edges."""
+    for _ in range(iterations):
+        out = []
+        n = len(points)
+        for i in range(n):
+            a = points[i]
+            b = points[(i + 1) % n]
+            out.append((0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]))
+            out.append((0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]))
+        points = out
+    return points
+
+
+def build_track(control_points=None, start_hint=None, smooth=0) -> dict:
+    if control_points is None:
+        control_points = CONTROL_POINTS
+    if start_hint is None:
+        start_hint = START_HINT
+    if smooth:
+        control_points = chaikin(control_points, smooth)
+    dense = sample_closed_spline(control_points, samples_per_segment=60)
     center, total_len = resample_uniform(dense, C.CENTERLINE_SPACING)
     n = len(center)
 
@@ -40,11 +61,11 @@ def build_track() -> dict:
         center[0][0] - center[-1][0], center[0][1] - center[-1][1]
     )
 
-    # Start index: resampled point nearest START_HINT.
+    # Start index: resampled point nearest the start hint.
     start_i = min(
         range(n),
-        key=lambda i: (center[i][0] - START_HINT[0]) ** 2
-        + (center[i][1] - START_HINT[1]) ** 2,
+        key=lambda i: (center[i][0] - start_hint[0]) ** 2
+        + (center[i][1] - start_hint[1]) ** 2,
     )
     start_heading = math.atan2(tans[start_i][1], tans[start_i][0])
 
@@ -113,17 +134,49 @@ def validate_track(track: dict) -> None:
 
 
 def main() -> None:
-    track = build_track()
-    validate_track(track)
     C.SHARED_DIR.mkdir(parents=True, exist_ok=True)
-    out = C.SHARED_DIR / "track.json"
-    with open(out, "w") as f:
-        json.dump(track, f)
+    tracks_dir = C.SHARED_DIR / "tracks"
+    tracks_dir.mkdir(exist_ok=True)
+    manifest = {"default": "city", "tracks": []}
+    for key, spec in TRACKS.items():
+        track = build_track(
+            spec["control_points"], spec["start_hint"], spec.get("smooth", 0)
+        )
+        validate_track(track)
+        track["label"] = spec["label"]
+        out = tracks_dir / f"{key}.json"
+        with open(out, "w") as f:
+            json.dump(track, f)
+            f.write("\n")
+        if key == "city":
+            # Training / parity pipeline keeps reading shared/track.json.
+            with open(C.SHARED_DIR / "track.json", "w") as f:
+                json.dump(track, f)
+                f.write("\n")
+        # Downsampled centerline so the lobby can draw a shape thumbnail
+        # without fetching the full track file.
+        center = track["centerline"]
+        stride = max(1, len(center) // 80)
+        preview = [
+            [round(p[0], 1), round(p[1], 1)] for p in center[::stride]
+        ]
+        manifest["tracks"].append(
+            {
+                "key": key,
+                "label": spec["label"],
+                "file": f"{key}.json",
+                "lap_length": round(track["lap_length"]),
+                "preview": preview,
+            }
+        )
+        print(
+            f"wrote {out}: lap={track['lap_length']:.0f} m, "
+            f"{len(track['centerline'])} centerline pts"
+        )
+    with open(tracks_dir / "index.json", "w") as f:
+        json.dump(manifest, f, indent=2)
         f.write("\n")
-    print(
-        f"wrote {out}: lap={track['lap_length']:.0f} m, "
-        f"{len(track['centerline'])} centerline pts"
-    )
+    print(f"wrote {tracks_dir / 'index.json'} ({len(TRACKS)} tracks)")
 
 
 if __name__ == "__main__":
