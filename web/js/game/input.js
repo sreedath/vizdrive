@@ -10,18 +10,27 @@ export class Input {
     this.steer = 0.0;
     this.cameraToggled = false;
     this.restartPressed = false;
+    this.lidarToggled = false;
+    this.themeToggled = false;
+    this.focusNextPressed = false;
 
     window.addEventListener("keydown", (e) => {
       if (e.repeat) return;
       this.keys.add(e.code);
-      if (e.code === "KeyC" || e.code === "KeyV") {
+      if (e.code === "KeyT" || e.code === "KeyV") {
         this.cameraToggled = true;
+      }
+      if (e.code === "KeyC") {
+        this.focusNextPressed = true;
       }
       if (e.code === "KeyR") {
         this.restartPressed = true;
       }
       if (e.code === "KeyL") {
         this.lidarToggled = true;
+      }
+      if (e.code === "KeyN") {
+        this.themeToggled = true;
       }
       if (
         ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
@@ -75,6 +84,18 @@ export class Input {
   consumeLidarToggle() {
     const v = this.lidarToggled;
     this.lidarToggled = false;
+    return v;
+  }
+
+  consumeFocusNext() {
+    const v = this.focusNextPressed;
+    this.focusNextPressed = false;
+    return v;
+  }
+
+  consumeThemeToggle() {
+    const v = this.themeToggled;
+    this.themeToggled = false;
     return v;
   }
 }

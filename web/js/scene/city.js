@@ -22,14 +22,22 @@ export function mulberry32(seed) {
 const PALETTE = [0x9aa7b5, 0xb5aa9a, 0x8d9aa8, 0xa89d8d, 0x7f8b99, 0xbfb6a6];
 
 // Cheap window grid painted once onto a small canvas per palette color.
+// Returns the facade texture plus a glow texture (lit windows only, on
+// black) used as emissiveMap so windows shine at night.
 function windowTexture(baseColor, rand) {
   const canvas = document.createElement("canvas");
   canvas.width = 64;
   canvas.height = 128;
   const ctx = canvas.getContext("2d");
+  const glowCanvas = document.createElement("canvas");
+  glowCanvas.width = 64;
+  glowCanvas.height = 128;
+  const gctx = glowCanvas.getContext("2d");
   const c = new THREE.Color(baseColor);
   ctx.fillStyle = `rgb(${c.r * 255}, ${c.g * 255}, ${c.b * 255})`;
   ctx.fillRect(0, 0, 64, 128);
+  gctx.fillStyle = "#000";
+  gctx.fillRect(0, 0, 64, 128);
   for (let row = 0; row < 12; row++) {
     for (let col = 0; col < 5; col++) {
       const lit = rand() < 0.25;
@@ -37,19 +45,30 @@ function windowTexture(baseColor, rand) {
         ? "rgba(255, 236, 160, 0.9)"
         : "rgba(28, 36, 52, 0.75)";
       ctx.fillRect(6 + col * 11, 8 + row * 9.5, 7, 5.5);
+      if (lit) {
+        gctx.fillStyle = "rgb(255, 214, 130)";
+        gctx.fillRect(6 + col * 11, 8 + row * 9.5, 7, 5.5);
+      }
     }
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
+  const glow = new THREE.CanvasTexture(glowCanvas);
+  glow.colorSpace = THREE.SRGBColorSpace;
+  return { tex, glow };
 }
 
 function buildingMaterials(rand) {
   // Per palette color: window-textured sides + plain roof.
   return PALETTE.map((color) => {
+    const { tex, glow } = windowTexture(color, rand);
     const sideMat = new THREE.MeshLambertMaterial({
-      map: windowTexture(color, rand),
+      map: tex,
+      emissive: 0x000000,
+      emissiveMap: glow,
+      emissiveIntensity: 0.0,
     });
+    sideMat.userData.window = true; // themed by scene/theme.js
     const roofMat = new THREE.MeshLambertMaterial({
       color: new THREE.Color(color).multiplyScalar(0.55),
     });

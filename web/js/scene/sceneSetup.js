@@ -42,5 +42,5 @@ export function createScene() {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  return { scene, sun };
+  return { scene, sun, hemi, ground };
 }
