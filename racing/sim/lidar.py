@@ -124,7 +124,7 @@ class Lidar:
         Ray i angle: heading - FOV/2 + FOV * i / (N - 1).
 
         cars: optional iterable of opponent poses (objects with .x, .z,
-        .heading); each is sensed as its 3-circle collision capsule, so rays
+        .heading); each is sensed as its collision capsule, so rays
         report the nearer of wall or car."""
         n = C.LIDAR_NUM_RAYS
         circles = []

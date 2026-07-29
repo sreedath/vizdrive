@@ -3,7 +3,7 @@
 The learner races in traffic: N opponent cars driven by frozen exported
 policies (policy.json files), throttled by a per-episode speed scale so the
 learner regularly catches and must pass them. LiDAR senses opponents as
-their 3-circle collision capsules (same in the browser), so the 28-dim
+their collision capsules (same in the browser), so the 28-dim
 observation is unchanged and any policy trained here runs in the arena.
 
 Reward is pluggable: pass reward_fn(signals) -> float, where signals is a
