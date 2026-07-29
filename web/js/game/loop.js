@@ -32,7 +32,7 @@ import { Music } from "./music.js";
 import { Hud } from "./hud.js";
 import { RaceManager } from "./race.js";
 
-const NUM_LAPS = 3;
+const NUM_LAPS = 2;
 const MAX_SUBSTEPS = 5;
 const TOPDOWN_CAR_SCALE = 2.0;
 const MAX_AGENTS = 10;
@@ -531,6 +531,8 @@ async function main() {
 
   function showLobby() {
     inLobby = true;
+    liveStandings = false;
+    standingsBtn.classList.add("hidden");
     hud.hideBanner();
     hud.hideLeaderboard();
     lidarViz.lines.visible = false;
@@ -555,12 +557,57 @@ async function main() {
       buildField(entries);
       lobbyEl.classList.add("hidden");
       inLobby = false;
+      standingsBtn.classList.remove("hidden");
       music.fadeOut(1.2);
     } catch (err) {
       statusEl.textContent = `failed to start: ${err.message}`;
       console.error("race start failed:", err);
     }
   }
+  // ---- Live standings table (button-toggled, realtime) ----
+  // The finish banner used to be the only place lap times appeared, which
+  // meant waiting for every car to finish (or DNF out). The standings
+  // button opens the same table mid-race, refreshed live; the X closes it.
+  const standingsBtn = document.getElementById("standings-btn");
+  const bannerClose = document.getElementById("banner-close");
+  let liveStandings = false;
+
+  function renderLiveStandings() {
+    const order = currentStandings();
+    const rows = order.map((id) => {
+      const car = carById(id);
+      const st = race.carState(id);
+      return {
+        name: car.name,
+        colorCss: cssColor(car.color),
+        isHuman: car.isHuman,
+        lapTimes: st.lapTimes,
+        total: st.finished ? st.finishTime : null,
+        dnf: st.dnf,
+        lapsCompleted: st.lapsCompleted,
+        status: st.finished
+          ? null
+          : `on lap ${Math.min(st.lapsCompleted + 1, NUM_LAPS)}`,
+      };
+    });
+    hud.showBanner("LIVE STANDINGS", rows, "updating in real time");
+  }
+
+  standingsBtn.addEventListener("click", () => {
+    if (inLobby || !cars.length) return;
+    if (race.phase === "finished") {
+      showFinishBanner();
+    } else {
+      liveStandings = true;
+      renderLiveStandings();
+    }
+  });
+
+  bannerClose.addEventListener("click", () => {
+    liveStandings = false;
+    hud.hideBanner();
+  });
+
   startBtn.addEventListener("click", startRace);
   showLobby();
 
@@ -754,6 +801,7 @@ async function main() {
     race.maybeFinish();
     if (race.phase === "finished" && !bannerShown) {
       bannerShown = true;
+      liveStandings = false; // final results replace the live table
       showFinishBanner();
     }
   }
@@ -859,6 +907,9 @@ async function main() {
             };
           })
         );
+        if (liveStandings && race.phase !== "finished") {
+          renderLiveStandings();
+        }
       }
     }
 

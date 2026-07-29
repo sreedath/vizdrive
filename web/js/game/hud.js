@@ -22,6 +22,7 @@ export class Hud {
     this.bannerEl = document.getElementById("banner");
     this.bannerTitle = document.getElementById("banner-title");
     this.bannerTable = document.getElementById("banner-table");
+    this.bannerHint = document.getElementById("banner-hint");
     this.leaderboardEl = document.getElementById("leaderboard");
     this.lastCountdown = null;
   }
@@ -79,10 +80,13 @@ export class Hud {
   }
 
   // rows: ranked [{ name, colorCss, isHuman, lapTimes, total, dnf,
-  // lapsCompleted }]. Rendered as a results leaderboard: one row per
-  // driver, one column per lap, plus total. Fastest lap is highlighted.
-  showBanner(title, rows) {
+  // lapsCompleted, status? }]. Rendered as a results leaderboard: one row
+  // per driver, one column per lap, plus total. Fastest lap is highlighted.
+  // Running cars (total null, no dnf) show their live status text instead
+  // of a total, so the same table doubles as the in-race standings view.
+  showBanner(title, rows, hint = "press R to return to the lobby") {
     this.bannerTitle.textContent = title;
+    this.bannerHint.textContent = hint;
     const numLaps = this.numLaps;
     let bestLap = Infinity;
     for (const r of rows) {
@@ -106,7 +110,9 @@ export class Hud {
       }
       const total = r.dnf
         ? `DNF (${r.lapsCompleted} lap${r.lapsCompleted === 1 ? "" : "s"})`
-        : formatTime(r.total);
+        : r.total === null && r.status
+          ? r.status
+          : formatTime(r.total);
       html += `<td class="bt-total">${total}</td></tr>`;
     });
     this.bannerTable.innerHTML = html;
