@@ -7,8 +7,27 @@ MUST match web/js/sim/lidar.js line by line (parity-tested).
 import math
 
 from racing import constants as C
+from racing.sim.collision import CAR_CIRCLE_OFFSETS, CAR_CIRCLE_RADIUS
 
 EPS = 1e-12
+
+
+def ray_circle(ox, oz, dx, dz, cx, cz, r):
+    """Ray (unit dir) vs circle; nearest t >= 0 along the ray or -1.0.
+    Returns 0.0 when the origin is inside the circle."""
+    mx = ox - cx
+    mz = oz - cz
+    b = mx * dx + mz * dz
+    c = mx * mx + mz * mz - r * r
+    if c > 0.0 and b > 0.0:
+        return -1.0
+    disc = b * b - c
+    if disc < 0.0:
+        return -1.0
+    t = -b - math.sqrt(disc)
+    if t < 0.0:
+        t = 0.0
+    return t
 
 
 def ray_segment(ox, oz, dx, dz, ax, az, bx, bz):
@@ -100,13 +119,30 @@ class Lidar:
                 break
         return best_t
 
-    def scan(self, x, z, heading):
+    def scan(self, x, z, heading, cars=None):
         """List of LIDAR_NUM_RAYS normalized [0,1] distances.
-        Ray i angle: heading - FOV/2 + FOV * i / (N - 1)."""
+        Ray i angle: heading - FOV/2 + FOV * i / (N - 1).
+
+        cars: optional iterable of opponent poses (objects with .x, .z,
+        .heading); each is sensed as its 3-circle collision capsule, so rays
+        report the nearer of wall or car."""
         n = C.LIDAR_NUM_RAYS
+        circles = []
+        if cars:
+            for car in cars:
+                fx = math.cos(car.heading)
+                fz = math.sin(car.heading)
+                for o in CAR_CIRCLE_OFFSETS:
+                    circles.append((car.x + fx * o, car.z + fz * o))
         out = []
         for i in range(n):
             ang = heading - C.LIDAR_FOV / 2.0 + (C.LIDAR_FOV * i) / (n - 1)
-            d = self.cast_ray(x, z, math.cos(ang), math.sin(ang))
+            dx = math.cos(ang)
+            dz = math.sin(ang)
+            d = self.cast_ray(x, z, dx, dz)
+            for cx, cz in circles:
+                t = ray_circle(x, z, dx, dz, cx, cz, CAR_CIRCLE_RADIUS)
+                if 0.0 <= t < d:
+                    d = t
             out.append(d / C.LIDAR_MAX_RANGE)
         return out

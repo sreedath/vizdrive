@@ -1,4 +1,4 @@
-"""Car-vs-wall collision (slide, no bounce).
+"""Car-vs-wall collision (slide, no bounce) and car-vs-car push-apart.
 
 MUST match web/js/sim/collision.js line by line (parity-tested).
 """
@@ -69,3 +69,70 @@ class WallCollider:
             ),
             True,
         )
+
+
+# Car-vs-car collision. Each car is a capsule approximated by 3 circles
+# along its heading (tail/center/nose), sized to hug the 4.2 x 2.0 body box.
+# Deepest-pair resolution, half the overlap each. Port of resolveCarCar in
+# web/js/sim/collision.js; the constants and math must stay identical.
+CAR_CIRCLE_OFFSETS = (-1.1, 0.0, 1.1)
+CAR_CIRCLE_RADIUS = 1.0
+CAR_CAR_ITERATIONS = 4
+
+
+def car_circles(x, z, heading):
+    """The 3 capsule circle centers for a car at (x, z, heading)."""
+    fx = math.cos(heading)
+    fz = math.sin(heading)
+    return [(x + fx * o, z + fz * o) for o in CAR_CIRCLE_OFFSETS]
+
+
+def resolve_car_car(a: CarState, b: CarState):
+    """Push two overlapping cars apart. Returns (a2, b2, contact); the
+    inputs are never mutated and are returned as-is when not touching."""
+    ax = a.x
+    az = a.z
+    bx = b.x
+    bz = b.z
+    contact = False
+    min_dist = 2.0 * CAR_CIRCLE_RADIUS
+
+    for _ in range(CAR_CAR_ITERATIONS):
+        ca = car_circles(ax, az, a.heading)
+        cb = car_circles(bx, bz, b.heading)
+        # Find the deepest-penetrating circle pair this iteration.
+        worst = 0.0
+        nx = 0.0
+        nz = 0.0
+        for pax, paz in ca:
+            for pbx, pbz in cb:
+                dx = pbx - pax
+                dz = pbz - paz
+                dist = math.hypot(dx, dz)
+                pen = min_dist - dist
+                if pen <= worst:
+                    continue
+                worst = pen
+                if dist > 1e-9:
+                    nx = dx / dist
+                    nz = dz / dist
+                else:
+                    # Coincident circles: push sideways vs a's heading.
+                    nx = -math.sin(a.heading)
+                    nz = math.cos(a.heading)
+        if worst <= 0.0:
+            break
+        contact = True
+        push = worst * 0.5
+        ax -= nx * push
+        az -= nz * push
+        bx += nx * push
+        bz += nz * push
+
+    if not contact:
+        return a, b, False
+    return (
+        CarState(ax, az, a.heading, a.speed),
+        CarState(bx, bz, b.heading, b.speed),
+        True,
+    )

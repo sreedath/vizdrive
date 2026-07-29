@@ -25,12 +25,14 @@ export class AgentDriver {
 
   // Called every physics tick; recomputes the action every FRAME_SKIP ticks
   // (30 Hz control), mirroring the training-time action repeat.
-  drive(state) {
+  // others: optional array of other cars' states ({x, z, heading}) sensed
+  // by the LiDAR as collision capsules, matching OvertakeEnv training.
+  drive(state, others = null) {
     const { C } = this;
     if (this.tick % C.FRAME_SKIP === 0) {
       const loc = this.progress.locate(state.x, state.z, this.hint);
       this.hint = loc.index;
-      const scan = this.lidar.scan(state.x, state.z, state.heading);
+      const scan = this.lidar.scan(state.x, state.z, state.heading, others);
       const n = C.LIDAR_NUM_RAYS;
       const obs = new Float64Array(n + 4);
       for (let i = 0; i < n; i++) {

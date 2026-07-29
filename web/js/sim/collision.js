@@ -86,8 +86,8 @@ export class WallCollider {
 // the meshes overlap ~2 m before the centers get close. Instead each car is
 // a capsule approximated by 3 circles along its heading (tail/center/nose),
 // sized to hug the body box. Deepest-pair resolution, half the overlap each.
-const CAR_CIRCLE_OFFSETS = [-1.1, 0.0, 1.1];
-const CAR_CIRCLE_RADIUS = 1.0;
+export const CAR_CIRCLE_OFFSETS = [-1.1, 0.0, 1.1];
+export const CAR_CIRCLE_RADIUS = 1.0;
 const CAR_CAR_ITERATIONS = 4;
 
 function carCircles(s) {

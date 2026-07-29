@@ -2,6 +2,7 @@
 <1e-9 on state, progress, and lidar over seeded random rollouts."""
 
 import json
+import math
 import subprocess
 from pathlib import Path
 
@@ -9,7 +10,7 @@ import pytest
 
 from racing import constants as C
 from racing.sim.car import CarState, step_car
-from racing.sim.collision import WallCollider
+from racing.sim.collision import WallCollider, resolve_car_car
 from racing.sim.lidar import Lidar
 from racing.sim.progress import ProgressTracker
 from racing.track.load import load_track
@@ -47,15 +48,31 @@ def python_rollout(track: dict, seed: int, steps: int):
     for _ in range(steps):
         steer = rng() * 2.0 - 1.0
         throttle = rng() * 1.7 - 0.7
+        # Ghost car: exercises car-car collision + car-sensing lidar.
+        gd = rng() * 30.0
+        glat = rng() * 8.0 - 4.0
+        gh = state.heading + rng() * 2.0 - 1.0
+        fx = math.cos(state.heading)
+        fz = math.sin(state.heading)
+        ghost = CarState(
+            state.x + fx * gd - fz * glat,
+            state.z + fz * gd + fx * glat,
+            gh,
+            0.0,
+        )
         contact = False
+        car_contact = False
         for _k in range(C.FRAME_SKIP):
             state = step_car(state, steer, throttle)
+            state, ghost, cc = resolve_car_car(state, ghost)
+            if cc:
+                car_contact = True
             state, hit = collider.resolve(state)
             if hit:
                 contact = True
         loc = prog.locate(state.x, state.z, hint)
         hint = loc.index
-        scan = lidar.scan(state.x, state.z, state.heading)
+        scan = lidar.scan(state.x, state.z, state.heading, [ghost])
         out.append(
             {
                 "x": state.x,
@@ -63,6 +80,9 @@ def python_rollout(track: dict, seed: int, steps: int):
                 "heading": state.heading,
                 "speed": state.speed,
                 "contact": 1 if contact else 0,
+                "car_contact": 1 if car_contact else 0,
+                "gx": ghost.x,
+                "gz": ghost.z,
                 "s": loc.s,
                 "lateral": loc.lateral,
                 "tangent": loc.tangent_angle,
@@ -92,7 +112,12 @@ def test_js_python_parity(seed):
     max_diff = 0.0
     for i, (p, j) in enumerate(zip(py, js)):
         assert p["contact"] == j["contact"], f"contact mismatch at step {i}"
-        for key in ("x", "z", "heading", "speed", "s", "lateral", "tangent"):
+        assert (
+            p["car_contact"] == j["car_contact"]
+        ), f"car_contact mismatch at step {i}"
+        for key in (
+            "x", "z", "heading", "speed", "gx", "gz", "s", "lateral", "tangent"
+        ):
             d = abs(p[key] - j[key])
             max_diff = max(max_diff, d)
             assert d < TOL, f"{key} diff {d:.3e} at step {i} (seed {seed})"
