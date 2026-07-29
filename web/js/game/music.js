@@ -1,25 +1,32 @@
-// Menu theme: a self-contained synthwave loop synthesized with WebAudio
-// (no audio files, no licensing). Layers: soft four-on-floor kick, offbeat
-// hats, driving 8th-note bass, 16th-note arpeggio through a feedback
-// delay, and a slow detuned pad. Loop: Am F C G, two bars each, 110 BPM.
+// Menu theme: a self-contained, inspiring cinematic loop synthesized with
+// WebAudio (no audio files, no licensing). No percussion: warm detuned
+// pads, a gentle plucked arpeggio, deep bass swells, and a sparse bell
+// melody with echo. Progression: C G Am F (two bars each) at 72 BPM.
 //
 // Browsers keep AudioContext suspended until a user gesture; start() is
 // safe to call early and arms a one-time gesture listener as a fallback.
 
-const BPM = 110;
+const BPM = 72;
 const SIXTEENTH = 60 / BPM / 4;
 const STEPS_PER_BAR = 16;
 const BARS = 8;
 const TOTAL_STEPS = STEPS_PER_BAR * BARS;
 
-// [bass root midi, arp chord tones (midi)] per 2-bar block.
+// [bass root midi, chord tones (midi)] per 2-bar block: C G Am F.
 const BLOCKS = [
-  [45, [57, 60, 64, 69]], // Am
-  [41, [53, 57, 60, 65]], // F
-  [48, [55, 60, 64, 67]], // C
-  [43, [55, 59, 62, 67]], // G
+  [36, [60, 64, 67]],
+  [43, [59, 62, 67]],
+  [45, [60, 64, 69]],
+  [41, [60, 65, 69]],
 ];
-const ARP_PATTERN = [0, 1, 2, 3, 2, 3, 1, 2];
+
+// Sparse uplifting melody: [absolute 16th step, midi, duration in beats].
+const MELODY = [
+  [0, 76, 3], [12, 74, 1], [16, 79, 4], [28, 76, 1],
+  [32, 74, 3], [44, 71, 1], [48, 74, 4],
+  [64, 72, 3], [76, 69, 1], [80, 76, 4],
+  [96, 69, 2], [104, 72, 2], [112, 77, 4],
+];
 
 function midiHz(m) {
   return 440 * Math.pow(2, (m - 69) / 12);
@@ -44,121 +51,126 @@ export class Music {
     this.master.gain.value = 0.0;
     this.master.connect(ctx.destination);
 
-    // Echo bus for the arp.
-    this.delay = ctx.createDelay(1.0);
-    this.delay.delayTime.value = SIXTEENTH * 3;
+    // Long echo bus for the bell melody.
+    this.delay = ctx.createDelay(2.0);
+    this.delay.delayTime.value = SIXTEENTH * 6;
     this.delayGain = ctx.createGain();
-    this.delayGain.gain.value = 0.35;
+    this.delayGain.gain.value = 0.4;
     this.delayMix = ctx.createGain();
-    this.delayMix.gain.value = 0.6;
+    this.delayMix.gain.value = 0.5;
     this.delay.connect(this.delayGain);
     this.delayGain.connect(this.delay);
     this.delay.connect(this.delayMix);
     this.delayMix.connect(this.master);
-
-    // Short noise buffer for hats.
-    const len = Math.floor(ctx.sampleRate * 0.06);
-    this.noise = ctx.createBuffer(1, len, ctx.sampleRate);
-    const data = this.noise.getChannelData(0);
-    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
   }
 
-  _tone(type, freq, t, dur, peak, out, filterHz = null, glideTo = null) {
+  // Soft bell: fundamental + quiet octave, long exponential decay.
+  _bell(midi, t, dur, peak) {
     const ctx = this.ctx;
-    const osc = ctx.createOscillator();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, t);
-    if (glideTo !== null) {
-      osc.frequency.exponentialRampToValueAtTime(glideTo, t + dur);
-    }
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(peak, t + 0.012);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.04);
     gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    let node = osc;
-    if (filterHz) {
-      const filter = ctx.createBiquadFilter();
-      filter.type = "lowpass";
-      filter.frequency.value = filterHz;
-      filter.Q.value = 0.8;
-      osc.connect(filter);
-      node = filter;
+    gain.connect(this.master);
+    gain.connect(this.delay);
+    for (const [mult, g] of [[1, 1.0], [2, 0.35]]) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = midiHz(midi) * mult;
+      const og = ctx.createGain();
+      og.gain.value = g;
+      osc.connect(og);
+      og.connect(gain);
+      osc.start(t);
+      osc.stop(t + dur + 0.1);
     }
-    node.connect(gain);
-    gain.connect(out);
-    osc.start(t);
-    osc.stop(t + dur + 0.05);
   }
 
+  // Gentle pluck: triangle with a fast decay through a soft lowpass.
+  _pluck(midi, t, peak) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = midiHz(midi);
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1800;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + 0.6);
+  }
+
+  // Deep sine bass swell for a whole chord block.
+  _bass(midi, t, dur) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = midiHz(midi);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.15, t + dur * 0.25);
+    gain.gain.linearRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain);
+    gain.connect(this.master);
+    osc.start(t);
+    osc.stop(t + dur + 0.1);
+  }
+
+  // Warm detuned pad with a slow breathing filter.
   _pad(tones, t, dur) {
     const ctx = this.ctx;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.linearRampToValueAtTime(0.05, t + dur * 0.4);
+    gain.gain.linearRampToValueAtTime(0.045, t + dur * 0.35);
     gain.gain.linearRampToValueAtTime(0.0001, t + dur);
     const filter = ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.value = 900;
+    filter.frequency.setValueAtTime(500, t);
+    filter.frequency.linearRampToValueAtTime(1100, t + dur * 0.5);
+    filter.frequency.linearRampToValueAtTime(500, t + dur);
     filter.connect(gain);
     gain.connect(this.master);
     for (const m of tones) {
-      for (const det of [-6, 6]) {
+      for (const det of [-5, 5]) {
         const osc = ctx.createOscillator();
         osc.type = "sawtooth";
         osc.frequency.value = midiHz(m);
         osc.detune.value = det;
         osc.connect(filter);
         osc.start(t);
-        osc.stop(t + dur + 0.05);
+        osc.stop(t + dur + 0.1);
       }
     }
   }
 
-  _hat(t, peak) {
-    const ctx = this.ctx;
-    const src = ctx.createBufferSource();
-    src.buffer = this.noise;
-    const filter = ctx.createBiquadFilter();
-    filter.type = "highpass";
-    filter.frequency.value = 6500;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(peak, t);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
-    src.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.master);
-    src.start(t);
-  }
-
   _scheduleStep(step, t) {
-    const block = BLOCKS[Math.floor(step / (STEPS_PER_BAR * 2)) % 4];
-    const [bassRoot, chord] = block;
-    const inBar = step % STEPS_PER_BAR;
+    const blockLen = STEPS_PER_BAR * 2;
+    const [bassRoot, chord] = BLOCKS[Math.floor(step / blockLen) % 4];
 
-    // Kick: four on the floor.
-    if (inBar % 4 === 0) {
-      this._tone("sine", 105, t, 0.16, 0.5, this.master, null, 42);
+    // Chord block start: pad + bass swell.
+    if (step % blockLen === 0) {
+      const dur = blockLen * SIXTEENTH;
+      this._pad(chord, t, dur);
+      this._bass(bassRoot, t, dur);
     }
-    // Hats on the offbeats.
-    if (inBar % 4 === 2) {
-      this._hat(t, 0.05);
+    // Gentle arpeggio on 8th notes: low-high ripple across the chord.
+    if (step % 2 === 0) {
+      const ripple = [0, 1, 2, 1];
+      const idx = ripple[(step / 2) % ripple.length];
+      const octave = step % STEPS_PER_BAR >= 8 ? 12 : 0;
+      this._pluck(chord[idx] + octave, t, 0.03);
     }
-    // Bass: driving 8ths, root with a lift at bar end.
-    if (inBar % 2 === 0) {
-      const m = inBar >= 14 ? bassRoot + 12 : bassRoot;
-      this._tone("sawtooth", midiHz(m), t, SIXTEENTH * 1.8, 0.16,
-        this.master, 420);
-    }
-    // Arp: 16ths through the delay bus.
-    const idx = ARP_PATTERN[step % ARP_PATTERN.length];
-    const octaveUp = step % 32 >= 16 ? 12 : 0;
-    this._tone("square", midiHz(chord[idx] + octaveUp), t,
-      SIXTEENTH * 0.9, 0.05, this.delayMix, 2400);
-    this._tone("square", midiHz(chord[idx] + octaveUp), t,
-      SIXTEENTH * 0.9, 0.045, this.delay, 2400);
-    // Pad: one chord per 2-bar block.
-    if (step % (STEPS_PER_BAR * 2) === 0) {
-      this._pad(chord, t, STEPS_PER_BAR * 2 * SIXTEENTH);
+    // Bell melody.
+    for (const [at, midi, beats] of MELODY) {
+      if (at === step) {
+        this._bell(midi, t, Math.max(1.2, beats * 4 * SIXTEENTH), 0.09);
+      }
     }
   }
 
@@ -166,12 +178,12 @@ export class Music {
     if (this.timer) return;
     this.nextTime = this.ctx.currentTime + 0.1;
     this.timer = setInterval(() => {
-      while (this.nextTime < this.ctx.currentTime + 0.25) {
+      while (this.nextTime < this.ctx.currentTime + 0.3) {
         this._scheduleStep(this.step % TOTAL_STEPS, this.nextTime);
         this.step += 1;
         this.nextTime += SIXTEENTH;
       }
-    }, 60);
+    }, 80);
   }
 
   _fadeTo(value, seconds) {
@@ -187,7 +199,7 @@ export class Music {
     if (!this.enabled) return;
     this._ensure();
     this._run();
-    this._fadeTo(this.level, 2.0);
+    this._fadeTo(this.level, 2.5);
     if (this.ctx.state === "suspended") {
       this.ctx.resume();
       if (!this.armed) {
