@@ -153,7 +153,7 @@ export class Lidar {
   // Returns Float64Array of LIDAR_NUM_RAYS normalized [0,1] distances.
   // Ray i angle: heading - FOV/2 + FOV * i / (N - 1).
   // cars: optional array of opponent poses ({x, z, heading}); each is
-  // sensed as its 3-circle collision capsule, so rays report the nearer
+  // sensed as its collision capsule, so rays report the nearer
   // of wall or car. MUST match racing/sim/lidar.py.
   scan(x, z, heading, cars = null) {
     const { C } = this;

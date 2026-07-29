@@ -506,6 +506,29 @@ body {
   visibility: visible;
 }
 
+#agent-tools {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#agent-tools button {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+#agent-tools button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
 /* Roster */
 
 #roster {
@@ -630,12 +653,21 @@ body {
 }
 
 #lobby-footer a {
-  color: #7fb1ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
   text-decoration: none;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
 }
 
 #lobby-footer a:hover {
-  text-decoration: underline;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--line-strong);
 }
 
 /* ---- Loading screen ---- */

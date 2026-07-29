@@ -12,14 +12,19 @@ import { AgentDriver } from "../agent/agentDriver.js";
 import { LidarViz } from "../scene/lidarViz.js";
 import { buildTrackMeshes } from "../scene/trackMesh.js";
 import { buildCity } from "../scene/city.js";
-import { buildCarMesh, placeCarMesh } from "../scene/carMesh.js";
+import {
+  buildCarMesh,
+  placeCarMesh,
+  setCarBrake,
+  setCarNight,
+} from "../scene/carMesh.js";
 import {
   buildNameLabel,
   disposeNameLabel,
   scaleNameLabel,
 } from "../scene/nameLabel.js";
 import { createRenderer, createScene } from "../scene/sceneSetup.js";
-import { applyTheme } from "../scene/theme.js";
+import { ThemeMixer } from "../scene/theme.js";
 import { ChaseCamera, TopDownCamera } from "../scene/cameras.js";
 import { makeGrid } from "./grid.js";
 import { Input } from "./input.js";
@@ -188,12 +193,13 @@ async function main() {
   }
 
   // ---- Day / night theme (visual only; training is unaffected) ----
-  const themeEnv = { scene, fog: sceneFog, sun, hemi, ground };
+  const themeMixer = new ThemeMixer({ scene, fog: sceneFog, sun, hemi, ground });
   const themeBtn = document.getElementById("theme-btn");
   let themeName = localStorage.getItem("vizdrive-theme") ?? "day";
 
   function applyCurrentTheme() {
-    applyTheme(themeEnv, [cityGroup], themeName);
+    themeMixer.setGroups([cityGroup]);
+    themeMixer.setTarget(themeName);
     // Button shows the mode you would switch TO.
     themeBtn.textContent = themeName === "day" ? "\u263E" : "\u2600";
   }
@@ -201,10 +207,10 @@ async function main() {
   function toggleTheme() {
     themeName = themeName === "day" ? "night" : "day";
     localStorage.setItem("vizdrive-theme", themeName);
-    applyCurrentTheme();
+    themeMixer.setTarget(themeName);
+    themeBtn.textContent = themeName === "day" ? "\u263E" : "\u2600";
   }
   themeBtn.addEventListener("click", toggleTheme);
-  applyCurrentTheme();
 
   // Cars in the current race:
   // { id, name, color, isHuman, state, prev, driver, mesh, lbHint, s }
@@ -213,6 +219,8 @@ async function main() {
   let bannerShown = false;
   let leaderId = null;
   let focusOverride = null; // chase-cam target chosen with C, null = auto
+  applyCurrentTheme();
+  themeMixer.snap(themeName); // no crossfade on first load
 
   function clearCars() {
     for (const car of cars) {
@@ -265,6 +273,7 @@ async function main() {
       if (isHuman) humanCar = car;
     });
     leaderId = cars.length ? cars[0].id : null;
+    for (const car of cars) setCarNight(car.mesh, themeMixer.mix);
     hud.hideBanner();
     bannerShown = false;
     chaseCam.initialized = false;
@@ -347,6 +356,25 @@ async function main() {
       row.style.pointerEvents = "";
     }
   }
+
+  document
+    .getElementById("add-all-btn")
+    .addEventListener("click", async () => {
+      for (const agent of manifest.agents) {
+        if (roster.length >= MAX_AGENTS) break;
+        const already = roster.some(
+          (e) => e.kind === "builtin" && e.file === agent.file
+        );
+        if (already) continue;
+        await toggleBuiltin(agent, agentRows.get(agent.file));
+      }
+    });
+
+  document.getElementById("clear-all-btn").addEventListener("click", () => {
+    roster.length = 0;
+    renderRoster();
+    statusEl.textContent = "";
+  });
 
   // Track picker: clickable shape thumbnails drawn from the manifest's
   // downsampled centerline preview.
@@ -758,6 +786,9 @@ async function main() {
     if (input.consumeThemeToggle()) {
       toggleTheme();
     }
+    if (themeMixer.update(dt)) {
+      for (const car of cars) setCarNight(car.mesh, themeMixer.mix);
+    }
     if (input.consumeFocusNext() && !inLobby && cars.length) {
       const idx = cars.indexOf(focusCar());
       focusOverride = cars[(idx + 1) % cars.length];
@@ -781,6 +812,7 @@ async function main() {
       const s = lerpState(car.prev, car.state, alpha);
       poses.push(s);
       placeCarMesh(car.mesh, s.x, s.z, s.heading);
+      setCarBrake(car.mesh, car.state.speed < car.prev.speed - 1e-4);
       if (car === focus) focusPose = s;
     }
     if (inLobby) {
