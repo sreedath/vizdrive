@@ -650,6 +650,9 @@ body {
 #lobby-footer {
   margin-top: 16px;
   font-size: 13px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
 
 #lobby-footer a {
