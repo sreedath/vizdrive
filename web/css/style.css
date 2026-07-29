@@ -152,11 +152,7 @@ body {
   border: 1px solid #2e3a52;
   border-radius: 8px;
   padding: 6px 10px;
-  cursor: pointer;
-}
-
-#agent-loader:hover {
-  background: rgba(20, 28, 44, 0.85);
+  pointer-events: none;
 }
 
 #agent-status {
@@ -166,4 +162,86 @@ body {
 
 #policy-file {
   display: none;
+}
+
+#lobby {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 14, 22, 0.92);
+  border: 1px solid #2e3a52;
+  border-radius: 12px;
+  padding: 30px 44px;
+  text-align: center;
+  min-width: 360px;
+}
+
+#lobby-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin-bottom: 22px;
+}
+
+.lobby-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+
+#agent-select {
+  background: #141c2c;
+  color: #e8eaf0;
+  border: 1px solid #2e3a52;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 15px;
+  min-width: 230px;
+}
+
+#lobby-upload {
+  display: inline-block;
+  font-size: 13px;
+  opacity: 0.75;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 14px;
+}
+
+#lobby-upload:hover {
+  opacity: 1;
+}
+
+#lobby-status {
+  font-size: 13px;
+  min-height: 18px;
+  color: #f0a35e;
+  margin-bottom: 12px;
+}
+
+#start-btn {
+  display: block;
+  width: 100%;
+  background: #2b6fdd;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+}
+
+#start-btn:hover {
+  background: #3a80ee;
+}
+
+#start-btn:disabled {
+  background: #2e3a52;
+  cursor: wait;
 }

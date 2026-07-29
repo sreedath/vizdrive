@@ -34,11 +34,11 @@ function lerpState(prev, cur, alpha) {
 
 async function main() {
   const [C, track] = await Promise.all([loadConstants(), loadTrack()]);
-  let policy = null;
+  let manifest = { agents: [] };
   try {
-    policy = await loadJson("../shared/policy.json");
+    manifest = await loadJson("../shared/policies/index.json");
   } catch {
-    console.warn("no policy.json yet: running single-player");
+    console.warn("no policies/index.json: only custom upload available");
   }
   document.getElementById("loading").classList.add("hidden");
 
@@ -70,7 +70,15 @@ async function main() {
       agentMesh = buildCarMesh(0xe8720c);
       scene.add(agentMesh);
     }
+    agentMesh.visible = true;
     document.getElementById("agent-status").textContent = label;
+    resetRace();
+  }
+
+  function clearAgent() {
+    agentDriver = null;
+    if (agentMesh) agentMesh.visible = false;
+    document.getElementById("agent-status").textContent = "solo";
     resetRace();
   }
 
@@ -103,29 +111,92 @@ async function main() {
     chaseCam.initialized = false;
   }
   resetRace();
-  if (policy) {
-    try {
-      applyPolicy(policy, "trained (default)");
-    } catch (err) {
-      console.error("default policy failed self-test:", err);
-    }
+
+  // ---- Lobby: pick an opponent checkpoint, then press START. ----
+  let inLobby = true;
+  const lobbyEl = document.getElementById("lobby");
+  const selectEl = document.getElementById("agent-select");
+  const statusEl = document.getElementById("lobby-status");
+  const startBtn = document.getElementById("start-btn");
+  const policyCache = new Map(); // file -> parsed policy json
+  let customPolicy = null; // { label, json } from the upload input
+
+  for (const agent of manifest.agents) {
+    const opt = document.createElement("option");
+    opt.value = agent.file;
+    opt.textContent = agent.label;
+    selectEl.appendChild(opt);
+  }
+  const soloOpt = document.createElement("option");
+  soloOpt.value = "__solo__";
+  soloOpt.textContent = "no opponent (solo)";
+  selectEl.appendChild(soloOpt);
+  if (manifest.default) selectEl.value = manifest.default;
+
+  function showLobby() {
+    inLobby = true;
+    hud.hideBanner();
+    statusEl.textContent = "";
+    lobbyEl.classList.remove("hidden");
   }
 
-  // Upload any exported policy.json to race against that agent.
+  async function startRace() {
+    const choice = selectEl.value;
+    startBtn.disabled = true;
+    statusEl.textContent = "";
+    try {
+      if (choice === "__custom__") {
+        applyPolicy(customPolicy.json, customPolicy.label);
+      } else if (choice === "__solo__") {
+        clearAgent();
+      } else {
+        if (!policyCache.has(choice)) {
+          policyCache.set(
+            choice, await loadJson(`../shared/policies/${choice}`)
+          );
+        }
+        const label = selectEl.selectedOptions[0].textContent;
+        applyPolicy(policyCache.get(choice), label);
+      }
+      lobbyEl.classList.add("hidden");
+      inLobby = false;
+    } catch (err) {
+      statusEl.textContent = `failed to load agent: ${err.message}`;
+      console.error("agent load failed:", err);
+    } finally {
+      startBtn.disabled = false;
+    }
+  }
+  startBtn.addEventListener("click", startRace);
+
+  // Upload any exported policy.json to race against that checkpoint.
   document.getElementById("policy-file").addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        applyPolicy(JSON.parse(reader.result), file.name);
+        const json = JSON.parse(reader.result);
+        // Validate now so a bad file is rejected at upload time.
+        new AgentDriver(json, lidar, progress, C);
+        customPolicy = { label: `custom: ${file.name}`, json };
+        let opt = selectEl.querySelector('option[value="__custom__"]');
+        if (!opt) {
+          opt = document.createElement("option");
+          opt.value = "__custom__";
+          selectEl.appendChild(opt);
+        }
+        opt.textContent = customPolicy.label;
+        selectEl.value = "__custom__";
+        statusEl.textContent = `loaded ${file.name}`;
       } catch (err) {
-        document.getElementById("agent-status").textContent = "invalid file";
+        statusEl.textContent = "invalid policy file";
         console.error("policy load failed:", err);
       }
     };
     reader.readAsText(file);
   });
+  showLobby();
 
   window.addEventListener("resize", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -185,8 +256,9 @@ async function main() {
     last = now;
     if (dt > 0.25) dt = 0.25;
 
-    if (input.consumeRestart()) {
+    if (input.consumeRestart() && !inLobby) {
       resetRace();
+      showLobby();
     }
     if (input.consumeCameraToggle()) {
       activeCam = activeCam === chaseCam ? topCam : chaseCam;
@@ -205,7 +277,7 @@ async function main() {
     acc += dt;
     let steps = 0;
     while (acc >= C.DT && steps < MAX_SUBSTEPS) {
-      physicsTick();
+      if (!inLobby) physicsTick();
       acc -= C.DT;
       steps++;
     }
@@ -225,7 +297,7 @@ async function main() {
 
     chaseCam.update(hi.x, hi.z, hi.heading, human.speed, dt);
     hud.updateDriving(human.speed, race, "human");
-    hud.updateCountdown(race);
+    if (!inLobby) hud.updateCountdown(race);
 
     renderer.render(scene, activeCam.camera);
   }

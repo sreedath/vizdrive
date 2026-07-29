@@ -1,0 +1,10 @@
+{
+  "default": "policy_150k.json",
+  "agents": [
+    { "label": "rookie (25k steps)", "file": "policy_25k.json" },
+    { "label": "learner (75k steps)", "file": "policy_75k.json" },
+    { "label": "amateur (150k steps)", "file": "policy_150k.json" },
+    { "label": "pro (250k steps)", "file": "policy_250k.json" },
+    { "label": "champion (500k steps)", "file": "policy_500k.json" }
+  ]
+}

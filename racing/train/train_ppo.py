@@ -41,6 +41,8 @@ def main() -> None:
     parser.add_argument("--steps", type=int, default=2_000_000)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", type=str, default=str(RUNS / "ppo_race"))
+    parser.add_argument("--save-freq", type=int, default=250_000)
+    parser.add_argument("--prefix", type=str, default="ppo_race")
     parser.add_argument("--tensorboard", action="store_true")
     args = parser.parse_args()
 
@@ -69,9 +71,9 @@ def main() -> None:
         tensorboard_log=str(RUNS / "tb") if args.tensorboard else None,
     )
     checkpoint = CheckpointCallback(
-        save_freq=max(250_000 // NUM_ENVS, 1),
+        save_freq=max(args.save_freq // NUM_ENVS, 1),
         save_path=str(RUNS / "checkpoints"),
-        name_prefix="ppo_race",
+        name_prefix=args.prefix,
     )
     model.learn(total_timesteps=args.steps, callback=checkpoint, progress_bar=False)
     model.save(args.out)

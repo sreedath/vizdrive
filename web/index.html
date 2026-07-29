@@ -30,13 +30,23 @@
   <div id="banner" class="hidden">
     <div id="banner-title"></div>
     <table id="banner-table"></table>
-    <div id="banner-hint">press R to restart</div>
+    <div id="banner-hint">press R to pick an opponent and race again</div>
   </div>
-  <div id="help">arrows / WASD drive &middot; C camera &middot; L lidar &middot; R restart</div>
-  <label id="agent-loader" title="Load a policy.json exported by export_policy">
-    agent: <span id="agent-status">none</span>
-    <input type="file" id="policy-file" accept=".json,application/json" />
-  </label>
+  <div id="help">arrows / WASD drive &middot; C camera &middot; L lidar &middot; R menu</div>
+  <div id="agent-loader">vs <span id="agent-status">none</span></div>
+  <div id="lobby" class="hidden">
+    <div id="lobby-title">CITY GRAND PRIX</div>
+    <div class="lobby-row">
+      <label for="agent-select">opponent</label>
+      <select id="agent-select"></select>
+    </div>
+    <label id="lobby-upload" title="Load a policy.json exported by export_policy">
+      upload custom policy&hellip;
+      <input type="file" id="policy-file" accept=".json,application/json" />
+    </label>
+    <div id="lobby-status"></div>
+    <button id="start-btn">START RACE</button>
+  </div>
   <div id="loading">loading&hellip;</div>
   <script type="module" src="./js/game/loop.js"></script>
 </body>
