@@ -69,6 +69,12 @@ def main() -> None:
         default=1.0,
         help="throttle handicap multiplier applied in the browser (difficulty)",
     )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=str(SHARED / "policy.json"),
+        help="output path (default shared/policy.json = the arena's agent)",
+    )
     args = parser.parse_args()
 
     model = PPO.load(args.model, device="cpu")
@@ -99,8 +105,8 @@ def main() -> None:
         ],
         "test_vectors": test_vectors,
     }
-    SHARED.mkdir(exist_ok=True)
-    path = SHARED / "policy.json"
+    path = Path(args.out)
+    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(out, f)
         f.write("\n")

@@ -61,10 +61,17 @@ async function main() {
   scene.add(humanMesh);
   let agentMesh = null;
   let agentDriver = null;
-  if (policy) {
-    agentMesh = buildCarMesh(0xe8720c);
-    scene.add(agentMesh);
-    agentDriver = new AgentDriver(policy, lidar, progress, C);
+
+  function applyPolicy(policyJson, label) {
+    // Throws (and changes nothing) if the policy fails its self-test.
+    const driver = new AgentDriver(policyJson, lidar, progress, C);
+    agentDriver = driver;
+    if (!agentMesh) {
+      agentMesh = buildCarMesh(0xe8720c);
+      scene.add(agentMesh);
+    }
+    document.getElementById("agent-status").textContent = label;
+    resetRace();
   }
 
   const aspect = () => window.innerWidth / window.innerHeight;
@@ -96,6 +103,29 @@ async function main() {
     chaseCam.initialized = false;
   }
   resetRace();
+  if (policy) {
+    try {
+      applyPolicy(policy, "trained (default)");
+    } catch (err) {
+      console.error("default policy failed self-test:", err);
+    }
+  }
+
+  // Upload any exported policy.json to race against that agent.
+  document.getElementById("policy-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        applyPolicy(JSON.parse(reader.result), file.name);
+      } catch (err) {
+        document.getElementById("agent-status").textContent = "invalid file";
+        console.error("policy load failed:", err);
+      }
+    };
+    reader.readAsText(file);
+  });
 
   window.addEventListener("resize", () => {
     renderer.setSize(window.innerWidth, window.innerHeight);

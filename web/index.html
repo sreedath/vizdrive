@@ -33,6 +33,10 @@
     <div id="banner-hint">press R to restart</div>
   </div>
   <div id="help">arrows / WASD drive &middot; C camera &middot; L lidar &middot; R restart</div>
+  <label id="agent-loader" title="Load a policy.json exported by export_policy">
+    agent: <span id="agent-status">none</span>
+    <input type="file" id="policy-file" accept=".json,application/json" />
+  </label>
   <div id="loading">loading&hellip;</div>
   <script type="module" src="./js/game/loop.js"></script>
 </body>
