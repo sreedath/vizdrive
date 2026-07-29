@@ -29,7 +29,10 @@ export function buildCarMesh(bodyColor) {
   cabin.castShadow = true;
   group.add(cabin);
 
-  const wheelGeo = new THREE.BoxGeometry(0.8, 0.5, 0.35);
+  // Cylinder wheels, axis lateral (+z local), low segment count for the
+  // low-poly look.
+  const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.35, 14);
+  wheelGeo.rotateX(Math.PI / 2);
   for (const [wx, wz] of [
     [1.4, 1.0],
     [1.4, -1.0],
@@ -37,7 +40,7 @@ export function buildCarMesh(bodyColor) {
     [-1.4, -1.0],
   ]) {
     const wheel = new THREE.Mesh(wheelGeo, darkMat);
-    wheel.position.set(wx, 0.28, wz);
+    wheel.position.set(wx, 0.38, wz);
     wheel.castShadow = true;
     group.add(wheel);
   }

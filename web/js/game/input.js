@@ -1,7 +1,8 @@
 // Keyboard input: arrows + WASD, with steering slew-rate smoothing for the
 // human driver. Camera toggle and restart are exposed as one-shot flags.
 
-const STEER_SLEW = 6.0; // steer units per second
+const STEER_SLEW = 3.5; // steer units per second toward full lock
+const STEER_RETURN_SLEW = 6.0; // faster return to center
 
 export class Input {
   constructor() {
@@ -43,7 +44,10 @@ export class Input {
       this.keys.has("ArrowDown") || this.keys.has("KeyS") ? 1 : 0;
 
     const target = right - left;
-    const maxStep = STEER_SLEW * dt;
+    // Returning toward center is quicker than winding toward full lock.
+    const returning =
+      target === 0 || (this.steer !== 0 && Math.sign(target) !== Math.sign(this.steer));
+    const maxStep = (returning ? STEER_RETURN_SLEW : STEER_SLEW) * dt;
     const diff = target - this.steer;
     if (Math.abs(diff) <= maxStep) {
       this.steer = target;

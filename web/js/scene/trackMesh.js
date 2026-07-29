@@ -128,6 +128,40 @@ function gantry(track) {
   return group;
 }
 
+function centerDashes(track) {
+  // One merged geometry of white dashes along the centerline.
+  const positions = [];
+  const indices = [];
+  const c = track.centerline;
+  const t = track.tangents;
+  const n = c.length;
+  const dashHalf = 1.5;
+  const widthHalf = 0.18;
+  const y = 0.03;
+  let vi = 0;
+  for (let i = 0; i < n; i += 4) {
+    const [x, z] = c[i];
+    const [tx, tz] = t[i];
+    const nx = -tz;
+    const nz = tx;
+    positions.push(
+      x - tx * dashHalf + nx * widthHalf, y, z - tz * dashHalf + nz * widthHalf,
+      x - tx * dashHalf - nx * widthHalf, y, z - tz * dashHalf - nz * widthHalf,
+      x + tx * dashHalf + nx * widthHalf, y, z + tz * dashHalf + nz * widthHalf,
+      x + tx * dashHalf - nx * widthHalf, y, z + tz * dashHalf - nz * widthHalf
+    );
+    indices.push(vi, vi + 2, vi + 1, vi + 1, vi + 2, vi + 3);
+    vi += 4;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  return new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ color: 0xd8d8d8, side: THREE.DoubleSide })
+  );
+}
+
 export function buildTrackMeshes(track) {
   const group = new THREE.Group();
 
@@ -140,6 +174,7 @@ export function buildTrackMeshes(track) {
 
   group.add(wallMesh(track.left_wall, 1.0, 0xd94141, 0xf2f2f2, 4));
   group.add(wallMesh(track.right_wall, 1.0, 0xd94141, 0xf2f2f2, 4));
+  group.add(centerDashes(track));
   group.add(startLine(track));
   group.add(gantry(track));
   return group;

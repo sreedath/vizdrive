@@ -22,7 +22,7 @@ ACCEL = 12.0                    # m/s^2 full throttle
 BRAKE_DECEL = 25.0              # m/s^2 full brake
 DRAG = 0.35                     # 1/s linear drag coefficient (v * DRAG)
 ROLL_DECEL = 1.5                # m/s^2 rolling friction
-STEER_SPEED_FACTOR = 0.35       # steering attenuation with speed
+STEER_SPEED_FACTOR = 1.0        # steering attenuation with speed
 CAR_RADIUS = 1.1                # m collision circle
 
 # --- Collision ---

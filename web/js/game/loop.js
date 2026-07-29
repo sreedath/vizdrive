@@ -16,6 +16,7 @@ import { RaceManager } from "./race.js";
 
 const NUM_LAPS = 3;
 const MAX_SUBSTEPS = 5;
+const TOPDOWN_CAR_SCALE = 2.0;
 
 async function main() {
   const [C, track] = await Promise.all([loadConstants(), loadTrack()]);
@@ -101,8 +102,11 @@ async function main() {
     }
     if (input.consumeCameraToggle()) {
       activeCam = activeCam === chaseCam ? topCam : chaseCam;
-      // Fog only makes sense from the chase camera.
-      scene.fog = activeCam === chaseCam ? sceneFog : null;
+      // Fog only makes sense from the chase camera; in the map view the car
+      // is scaled up so it stays visible at track scale.
+      const isChase = activeCam === chaseCam;
+      scene.fog = isChase ? sceneFog : null;
+      humanMesh.scale.setScalar(isChase ? 1.0 : TOPDOWN_CAR_SCALE);
     }
 
     acc += dt;
