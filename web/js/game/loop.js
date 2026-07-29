@@ -217,7 +217,7 @@ async function main() {
       agentPrev = agent;
       const a = agentDriver.drive(agent);
       agent = stepCar(agent, a.steer, driving ? a.throttle : 0.0, C);
-      const cc = resolveCarCar(human, agent, C);
+      const cc = resolveCarCar(human, agent);
       human = cc.a;
       agent = cc.b;
       agent = collider.resolve(agent).state;

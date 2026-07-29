@@ -80,21 +80,71 @@ export class WallCollider {
   }
 }
 
-// Browser-only: circle push-apart, half the overlap each. Returns new states.
-export function resolveCarCar(a, b, C) {
-  const dx = b.x - a.x;
-  const dz = b.z - a.z;
-  const dist = Math.hypot(dx, dz);
-  const minDist = 2.0 * C.CAR_RADIUS;
-  if (dist >= minDist || dist < 1e-9) {
+// Browser-only car-vs-car collision.
+//
+// A single center circle is a bad fit for the 4.2 x 2.0 body: nose-to-tail
+// the meshes overlap ~2 m before the centers get close. Instead each car is
+// a capsule approximated by 3 circles along its heading (tail/center/nose),
+// sized to hug the body box. Deepest-pair resolution, half the overlap each.
+const CAR_CIRCLE_OFFSETS = [-1.1, 0.0, 1.1];
+const CAR_CIRCLE_RADIUS = 1.0;
+const CAR_CAR_ITERATIONS = 4;
+
+function carCircles(s) {
+  const fx = Math.cos(s.heading);
+  const fz = Math.sin(s.heading);
+  return CAR_CIRCLE_OFFSETS.map((o) => ({ x: s.x + fx * o, z: s.z + fz * o }));
+}
+
+// Returns new states; never mutates the inputs.
+export function resolveCarCar(a, b) {
+  let ax = a.x;
+  let az = a.z;
+  let bx = b.x;
+  let bz = b.z;
+  let contact = false;
+  const minDist = 2.0 * CAR_CIRCLE_RADIUS;
+
+  for (let iter = 0; iter < CAR_CAR_ITERATIONS; iter++) {
+    const ca = carCircles({ x: ax, z: az, heading: a.heading });
+    const cb = carCircles({ x: bx, z: bz, heading: b.heading });
+    // Find the deepest-penetrating circle pair this iteration.
+    let worst = 0.0;
+    let nx = 0.0;
+    let nz = 0.0;
+    for (const pa of ca) {
+      for (const pb of cb) {
+        const dx = pb.x - pa.x;
+        const dz = pb.z - pa.z;
+        const dist = Math.hypot(dx, dz);
+        const pen = minDist - dist;
+        if (pen <= worst) continue;
+        worst = pen;
+        if (dist > 1e-9) {
+          nx = dx / dist;
+          nz = dz / dist;
+        } else {
+          // Coincident circles: push sideways relative to a's heading.
+          nx = -Math.sin(a.heading);
+          nz = Math.cos(a.heading);
+        }
+      }
+    }
+    if (worst <= 0.0) break;
+    contact = true;
+    const push = worst * 0.5;
+    ax -= nx * push;
+    az -= nz * push;
+    bx += nx * push;
+    bz += nz * push;
+  }
+
+  if (!contact) {
     return { a, b, contact: false };
   }
-  const push = (minDist - dist) * 0.5;
-  const nx = dx / dist;
-  const nz = dz / dist;
   return {
-    a: { ...a, x: a.x - nx * push, z: a.z - nz * push },
-    b: { ...b, x: b.x + nx * push, z: b.z + nz * push },
+    a: { ...a, x: ax, z: az },
+    b: { ...b, x: bx, z: bz },
     contact: true,
   };
 }
