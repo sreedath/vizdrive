@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City Grand Prix</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="hud">
+    <div id="hud-left">
+      <div id="hud-speed">0</div>
+      <div class="hud-unit">km/h</div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-lap">LAP 1/3</div>
+      <div id="hud-time">0:00.000</div>
+      <div id="hud-best">BEST --:--.---</div>
+    </div>
+  </div>
+  <div id="center-msg"></div>
+  <div id="banner" class="hidden">
+    <div id="banner-title"></div>
+    <table id="banner-table"></table>
+    <div id="banner-hint">press R to restart</div>
+  </div>
+  <div id="help">arrows / WASD drive &middot; C camera &middot; R restart</div>
+  <div id="loading">loading&hellip;</div>
+  <script type="module" src="./js/game/loop.js"></script>
+</body>
+</html>

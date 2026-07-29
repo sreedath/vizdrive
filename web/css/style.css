@@ -1,0 +1,144 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0e14;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #e8eaf0;
+  user-select: none;
+}
+
+#game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#hud-left {
+  position: absolute;
+  left: 24px;
+  bottom: 20px;
+  text-align: center;
+}
+
+#hud-speed {
+  font-size: 52px;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+.hud-unit {
+  font-size: 14px;
+  opacity: 0.7;
+  letter-spacing: 2px;
+}
+
+#hud-right {
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  text-align: right;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+
+#hud-lap {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+#hud-time {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+#hud-best {
+  font-size: 14px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
+#center-msg {
+  position: absolute;
+  top: 32%;
+  width: 100%;
+  text-align: center;
+  font-size: 110px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-shadow: 0 4px 18px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+#banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(10, 14, 22, 0.92);
+  border: 1px solid #2e3a52;
+  border-radius: 12px;
+  padding: 28px 40px;
+  text-align: center;
+  min-width: 340px;
+}
+
+#banner-title {
+  font-size: 44px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+#banner-table {
+  margin: 0 auto 14px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+#banner-table td,
+#banner-table th {
+  padding: 4px 14px;
+  font-size: 15px;
+}
+
+#banner-hint {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+#help {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 10px;
+  font-size: 13px;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  opacity: 0.8;
+}
+
+.hidden {
+  display: none !important;
+}
