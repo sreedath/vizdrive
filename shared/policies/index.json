@@ -5,6 +5,11 @@
     { "label": "learner (75k steps)", "file": "policy_75k.json" },
     { "label": "amateur (150k steps)", "file": "policy_150k.json" },
     { "label": "pro (250k steps)", "file": "policy_250k.json" },
-    { "label": "champion (500k steps)", "file": "policy_500k.json" }
+    { "label": "champion (500k steps)", "file": "policy_500k.json" },
+    { "label": "Maverick (200k, speed reward)", "file": "policy_maverick_200k.json" },
+    { "label": "Steady (200k, clean reward)", "file": "policy_steady_200k.json" },
+    { "label": "Purist (200k, progress only)", "file": "policy_purist_200k.json" },
+    { "label": "Racer (200k, balanced reward)", "file": "policy_racer_200k.json" },
+    { "label": "Overtaker (trained in traffic)", "file": "policy_overtaker.json" }
   ]
 }

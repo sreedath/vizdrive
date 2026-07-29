@@ -75,6 +75,12 @@ def main() -> None:
         default=str(SHARED / "policy.json"),
         help="output path (default shared/policy.json = the arena's agent)",
     )
+    parser.add_argument(
+        "--name",
+        type=str,
+        default=None,
+        help="agent display name embedded in the JSON (shown in the game)",
+    )
     args = parser.parse_args()
 
     model = PPO.load(args.model, device="cpu")
@@ -92,6 +98,7 @@ def main() -> None:
         test_vectors.append({"obs": obs.tolist(), "action": ours.tolist()})
 
     out = {
+        **({"name": args.name} if args.name else {}),
         "obs_dim": obs_dim,
         "act_dim": layers[-1]["W"].shape[0],
         "speed_scale": args.speed_scale,
