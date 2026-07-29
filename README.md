@@ -1,10 +1,13 @@
-# City Grand Prix: Human vs PPO Agent
+# City Grand Prix: Multi-Agent RL Racing
 
-A lightweight browser racing game where you race a PPO-trained agent around a
-1.2 km loop through a low-poly city. Physics is a kinematic bicycle model on
-the ground plane (the 3D is purely visual), the agent senses the world through
-24 LiDAR rays only, and the trained policy runs in-browser as a tiny
-JSON-weights MLP.
+A lightweight browser racing game where up to 10 PPO-trained agents (plus
+optionally you) race around a 1.2 km loop through a low-poly city on an
+F1-style staggered grid. Physics is a kinematic bicycle model on the ground
+plane (the 3D is purely visual), agents sense the world through 24 LiDAR rays
+only, and trained policies run in-browser as tiny JSON-weights MLPs.
+
+Live arena: https://ppo-racing-arena.vercel.app
+Student training lab (Colab): https://github.com/sreedath/race-agent-lab
 
 ## Architecture
 
@@ -47,9 +50,10 @@ bash scripts/serve.sh   # then open http://localhost:8000/web/
 ## Controls
 
 - Arrows / WASD: drive
-- C or V: toggle chase cam / top-down map
-- L: toggle LiDAR ray visualization (red = hit, grey = max range)
-- R: restart race
+- C: cycle the chase camera through the cars
+- T or V: toggle chase cam / top-down map
+- L: toggle LiDAR rays for ALL cars (red = hit, grey = max range)
+- R: return to the lobby
 
 ## Agent
 
@@ -63,17 +67,45 @@ bash scripts/serve.sh   # then open http://localhost:8000/web/
 - Reward: +1.0/m progress along centerline, +0.1 x speed fraction,
   -0.5/step wall contact, -3.0 per new contact, -0.02/step time,
   -30 terminal for stuck/reverse.
+- LiDAR senses other cars as their 3-circle collision capsules (same in
+  Python and the browser, parity-tested), so agents can learn to avoid
+  and overtake traffic.
+
+## Overtaking in traffic
+
+`RaceTrackOvertake-v0` (racing/env/overtake_env.py) races the learner among
+N frozen `policy.json` opponents, throttled per episode so the learner
+regularly catches them. The pluggable reward gets `car_contact` /
+`new_car_hit` signals on top of the classic shaping. Train (warm start
+recommended):
+
+```bash
+python3 -m racing.train.train_overtake \
+    --init-from runs/checkpoints/ppo_race_500000_steps \
+    --steps 400000 --out runs/ppo_overtake
+```
 
 ## Racing custom agents
 
-The arena loads `shared/policy.json` by default. To race any other trained
-model (e.g., a checkpoint), export it to a file and use the "agent" button in
-the top-left of the game to upload it:
+The lobby is a roster builder: add built-in agents from the dropdown
+(checkpoint ladder 25k to 500k steps, plus 200k-step "personality" agents
+trained with different reward functions: Maverick/Steady/Purist/Racer)
+and/or upload any number of exported `policy.json` files (cap 10 agents). Untick "I race too" for spectator mode,
+where the chase camera follows the live race leader. Classification is pure
+positional F1: 3 laps, first across the line wins, grid order is shuffled
+every race, and once the winner finishes the rest have 45 s before being
+classified DNF.
+
+Export any trained model or checkpoint for the roster:
 
 ```bash
 python3 -m racing.train.export_policy \
-    --model runs/checkpoints/ppo_race_250000_steps --out runs/policy_250k.json
+    --model runs/checkpoints/ppo_race_250000_steps \
+    --out runs/policy_250k.json --name "My Racer"
 ```
+
+`--name` is embedded in the JSON and shown on the car's floating label and
+the leaderboard; car colors are assigned randomly per race.
 
 ## Difficulty tuning
 
@@ -81,4 +113,27 @@ Re-export with a throttle handicap to make the agent beatable:
 
 ```bash
 python3 -m racing.train.export_policy --speed-scale 0.9
+```
+
+## Classroom workflow
+
+1. Students open the [race-agent-lab Colab
+   notebook](https://github.com/sreedath/race-agent-lab) (one click, no
+   installs). The lab repo contains the same physics but with the reward
+   coefficients stripped: each student designs their own reward function
+   against the hidden reference, trains PPO (capped at 300k steps), and
+   downloads a named `policy.json`.
+2. Students send their JSON files to the instructor (or upload them
+   directly in the lobby).
+3. The instructor opens https://ppo-racing-arena.vercel.app, drags all
+   files into the roster, unticks "I race too" (or races along), and hits
+   START RACE. Live leaderboard top-left, finish banner with per-lap
+   times, DNFs classified 45 s after the winner.
+4. Rerun START for more heats: grid order and colors reshuffle each time.
+
+## Deployment
+
+```bash
+bash scripts/build_site.sh        # assembles dist/ (web/ + shared/)
+cd dist && vercel deploy --prod   # deployed at ppo-racing-arena.vercel.app
 ```

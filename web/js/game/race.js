@@ -15,6 +15,9 @@ function segIntersect(p1x, p1z, p2x, p2z, p3x, p3z, p4x, p4z) {
 }
 
 export const COUNTDOWN_SECONDS = 3.0;
+// After the first car finishes, everyone else gets this long to be
+// classified; then the race ends and unfinished cars are marked DNF.
+export const CLASSIFICATION_SECONDS = 45.0;
 
 export class RaceManager {
   constructor(track, numLaps = 3) {
@@ -32,6 +35,7 @@ export class RaceManager {
     this.phase = "countdown"; // countdown | racing | finished
     this.time = -COUNTDOWN_SECONDS;
     this.cars = new Map();
+    this.classifyDeadline = null;
   }
 
   addCar(id) {
@@ -43,6 +47,7 @@ export class RaceManager {
       lapTimes: [],
       finished: false,
       finishTime: null,
+      dnf: false,
     });
   }
 
@@ -85,6 +90,9 @@ export class RaceManager {
       if (car.lapsCompleted >= this.numLaps) {
         car.finished = true;
         car.finishTime = this.time;
+        if (this.classifyDeadline === null) {
+          this.classifyDeadline = this.time + CLASSIFICATION_SECONDS;
+        }
       }
     }
     car.gatesPassed += 1;
@@ -99,13 +107,36 @@ export class RaceManager {
   }
 
   maybeFinish() {
-    if (this.phase === "racing" && this.everyoneFinished()) {
+    if (this.phase !== "racing") return;
+    const timeUp =
+      this.classifyDeadline !== null && this.time >= this.classifyDeadline;
+    if (this.everyoneFinished() || timeUp) {
       this.phase = "finished";
+      for (const car of this.cars.values()) {
+        if (!car.finished) car.dnf = true;
+      }
     }
   }
 
   carState(id) {
     return this.cars.get(id);
+  }
+
+  // Ranked car ids: finishers by finish time, then running cars by
+  // laps > gates > centerline arc-length s (sById: id -> current s).
+  standings(sById = {}) {
+    const ids = [...this.cars.keys()];
+    ids.sort((a, b) => {
+      const ca = this.cars.get(a);
+      const cb = this.cars.get(b);
+      if (ca.finished !== cb.finished) return ca.finished ? -1 : 1;
+      if (ca.finished && cb.finished) return ca.finishTime - cb.finishTime;
+      if (cb.gatesPassed !== ca.gatesPassed) {
+        return cb.gatesPassed - ca.gatesPassed;
+      }
+      return (sById[b] ?? 0) - (sById[a] ?? 0);
+    });
+    return ids;
   }
 }
 

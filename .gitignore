@@ -7,3 +7,6 @@ checkpoints/
 tb_logs/
 .DS_Store
 node_modules/
+student-repo/
+dist/
+agents_for_upload/

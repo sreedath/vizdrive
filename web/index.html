@@ -3,7 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>City Grand Prix</title>
+  <title>VizDrive &middot; Vizuara Grand Prix</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="./assets/favicon-64.png" />
+  <link rel="icon" type="image/png" sizes="256x256" href="./assets/favicon-256.png" />
+  <link rel="apple-touch-icon" href="./assets/favicon-256.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Orbitron:wght@600;800&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="./css/style.css" />
   <script type="importmap">
     {
@@ -15,6 +24,10 @@
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+  <div id="brand">
+    <img src="./assets/vizuara-logo.png" alt="" />
+    <span>Viz<b>Drive</b></span>
+  </div>
   <div id="hud">
     <div id="hud-left">
       <div id="hud-speed">0</div>
@@ -26,28 +39,51 @@
       <div id="hud-best">BEST --:--.---</div>
     </div>
   </div>
+  <button id="theme-btn" type="button" title="Toggle day / night">&#9789;</button>
+  <button id="music-btn" type="button" title="Toggle music">&#9834;</button>
   <div id="center-msg"></div>
+  <div id="leaderboard" class="hidden"></div>
   <div id="banner" class="hidden">
     <div id="banner-title"></div>
     <table id="banner-table"></table>
-    <div id="banner-hint">press R to pick an opponent and race again</div>
+    <div id="banner-hint">press R to return to the lobby</div>
   </div>
-  <div id="help">arrows / WASD drive &middot; C camera &middot; L lidar &middot; R menu</div>
-  <div id="agent-loader">vs <span id="agent-status">none</span></div>
+  <div id="help">arrows / WASD drive &middot; C next car &middot; T view &middot; L lidar &middot; N day/night &middot; R menu</div>
   <div id="lobby" class="hidden">
-    <div id="lobby-title">CITY GRAND PRIX</div>
-    <div class="lobby-row">
-      <label for="agent-select">opponent</label>
-      <select id="agent-select"></select>
+    <div id="lobby-head">
+      <img src="./assets/vizuara-logo.png" alt="" id="lobby-logo" />
+      <div>
+        <div id="lobby-title">VIZUARA GRAND PRIX</div>
+        <div id="lobby-sub">powered by VizDrive</div>
+      </div>
     </div>
-    <label id="lobby-upload" title="Load a policy.json exported by export_policy">
-      upload custom policy&hellip;
-      <input type="file" id="policy-file" accept=".json,application/json" />
+    <div id="track-row">
+      <div id="track-cards" title="Pick the circuit for the next race"></div>
+    </div>
+    <div id="agent-table" title="Click agents to add them to the race"></div>
+    <label id="lobby-upload" title="Add policy.json files exported by export_policy">
+      upload agent policies&hellip;
+      <input type="file" id="policy-file" multiple accept=".json,application/json" />
+    </label>
+    <div id="roster"></div>
+    <label id="human-row">
+      <input type="checkbox" id="human-checkbox" />
+      I race too
     </label>
     <div id="lobby-status"></div>
     <button id="start-btn">START RACE</button>
+    <div id="lobby-footer">
+      <a href="https://github.com/sreedath/race-agent-lab" target="_blank" rel="noopener">
+        Train your own agent (Colab)
+      </a>
+    </div>
   </div>
-  <div id="loading">loading&hellip;</div>
+  <div id="loading">
+    <img src="./assets/vizuara-logo.png" id="loading-logo" alt="" />
+    <div id="loading-word">Viz<span>Drive</span></div>
+    <div id="loading-sub">VIZUARA GRAND PRIX</div>
+    <div id="loading-msg">warming up the grid<span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
+  </div>
   <script type="module" src="./js/game/loop.js"></script>
 </body>
 </html>
