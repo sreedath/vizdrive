@@ -68,9 +68,18 @@
       <button id="add-all-btn" type="button">add all</button>
       <button id="clear-all-btn" type="button">clear all</button>
     </div>
-    <label id="lobby-upload" title="Select any number of policy.json files at once">
+    <label id="lobby-upload" title="Race these files privately; nothing is shared">
       upload agent policies (multiple files ok)&hellip;
       <input type="file" id="policy-file" multiple accept=".json,application/json" />
+    </label>
+    <div id="garage-head">
+      <span>community garage</span>
+      <button id="garage-refresh" type="button" title="Refresh the garage list">&#8635;</button>
+    </div>
+    <div id="garage-table" title="Agents shared by the community; click to add them to the race"></div>
+    <label id="garage-upload" title="Publish your trained policy.json for everyone, permanently">
+      share your agent to the garage (public, permanent)&hellip;
+      <input type="file" id="garage-file" multiple accept=".json,application/json" />
     </label>
     <div id="roster"></div>
     <label id="human-row">

@@ -513,7 +513,8 @@ body {
 
 /* Agent table */
 
-#agent-table {
+#agent-table,
+#garage-table {
   margin: 4px auto 12px;
   max-width: 360px;
   max-height: 230px;
@@ -521,6 +522,56 @@ body {
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.02);
+}
+
+#garage-table {
+  max-height: 150px;
+  margin-bottom: 6px;
+}
+
+#garage-table:empty::after {
+  content: "no community agents yet: be the first to share one";
+  display: block;
+  text-align: center;
+  padding: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+#garage-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#garage-head button {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#garage-head button:hover {
+  color: var(--text);
+}
+
+.garage-date {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  flex: none;
 }
 
 .agent-row {
@@ -683,7 +734,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-#lobby-upload {
+#lobby-upload,
+#garage-upload {
   display: inline-block;
   font-size: 13px;
   color: var(--muted);
@@ -694,11 +746,17 @@ body {
   transition: color 0.12s;
 }
 
-#lobby-upload:hover {
+#lobby-upload:hover,
+#garage-upload:hover {
   color: var(--text);
 }
 
-#policy-file {
+#garage-upload {
+  margin-bottom: 10px;
+}
+
+#policy-file,
+#garage-file {
   display: none;
 }
 

@@ -27,6 +27,7 @@ import { createRenderer, createScene } from "../scene/sceneSetup.js";
 import { ThemeMixer } from "../scene/theme.js";
 import { ChaseCamera, TopDownCamera } from "../scene/cameras.js";
 import { makeGrid } from "./grid.js";
+import { garageList, garageFetch, garageUpload } from "./garage.js";
 import { Input } from "./input.js";
 import { Music } from "./music.js";
 import { Hud } from "./hud.js";
@@ -497,6 +498,7 @@ async function main() {
       rosterEl.appendChild(row);
     });
     syncAgentTable();
+    syncGarageTable();
   }
 
   function rosterFull() {
@@ -542,6 +544,126 @@ async function main() {
       statusEl.textContent = `invalid policy file: ${rejected.join(", ")}`;
     }
   });
+
+  // ---- Community garage: shared agent storage anyone can add to. ----
+  const garageTableEl = document.getElementById("garage-table");
+  const garageFileInput = document.getElementById("garage-file");
+  const garageRows = new Map(); // id -> row element
+  const garageCache = new Map(); // id -> policy json
+
+  function garageDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  function syncGarageTable() {
+    for (const [id, row] of garageRows) {
+      row.classList.toggle(
+        "selected",
+        roster.some((e) => e.kind === "garage" && e.id === id)
+      );
+    }
+  }
+
+  async function toggleGarage(entry, row) {
+    const idx = roster.findIndex(
+      (e) => e.kind === "garage" && e.id === entry.id
+    );
+    if (idx >= 0) {
+      roster.splice(idx, 1);
+      renderRoster();
+      statusEl.textContent = "";
+      return;
+    }
+    if (rosterFull()) return;
+    row.style.pointerEvents = "none";
+    try {
+      if (!garageCache.has(entry.id)) {
+        garageCache.set(entry.id, await garageFetch(entry.id));
+      }
+      const json = garageCache.get(entry.id);
+      new AgentDriver(json, lidar, progress, C); // validate before accepting
+      roster.push({ name: entry.name, kind: "garage", id: entry.id, json });
+      renderRoster();
+      statusEl.textContent = "";
+    } catch (err) {
+      statusEl.textContent = `failed to add agent: ${err.message}`;
+      console.error("garage agent load failed:", err);
+    } finally {
+      row.style.pointerEvents = "";
+    }
+  }
+
+  async function refreshGarage() {
+    try {
+      const entries = await garageList();
+      garageTableEl.textContent = "";
+      garageRows.clear();
+      for (const entry of entries) {
+        const row = document.createElement("div");
+        row.className = "agent-row";
+        const check = document.createElement("span");
+        check.className = "agent-check";
+        check.textContent = "\u2713";
+        const name = document.createElement("span");
+        name.className = "agent-label";
+        name.textContent = entry.name;
+        const date = document.createElement("span");
+        date.className = "garage-date";
+        date.textContent = garageDate(entry.created_at);
+        row.append(check, name, date);
+        row.addEventListener("click", () => toggleGarage(entry, row));
+        garageTableEl.appendChild(row);
+        garageRows.set(entry.id, row);
+      }
+      syncGarageTable();
+    } catch (err) {
+      console.error("garage list failed:", err);
+      statusEl.textContent = "community garage is unreachable right now";
+    }
+  }
+
+  function shareToGarage(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const json = JSON.parse(reader.result);
+          new AgentDriver(json, lidar, progress, C); // must drive to be shared
+          const stem = file.name.replace(/\.json$/i, "");
+          const name = String(json.name ?? stem).trim().slice(0, 40) || stem;
+          await garageUpload(name, json);
+          resolve(null);
+        } catch (err) {
+          console.error("garage upload failed:", err);
+          resolve(`${file.name} (${err.message})`);
+        }
+      };
+      reader.onerror = () => resolve(file.name);
+      reader.readAsText(file);
+    });
+  }
+
+  garageFileInput.addEventListener("change", async (e) => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length) return;
+    statusEl.textContent = "uploading to the garage\u2026";
+    const rejected = [];
+    for (const file of files) {
+      const bad = await shareToGarage(file);
+      if (bad) rejected.push(bad);
+    }
+    await refreshGarage();
+    statusEl.textContent = rejected.length
+      ? `not shared: ${rejected.join(", ")}`
+      : "shared! your agent is now in the community garage";
+  });
+
+  document
+    .getElementById("garage-refresh")
+    .addEventListener("click", refreshGarage);
+  refreshGarage(); // populate on page load; failure is non-fatal
 
   function showLobby() {
     inLobby = true;
