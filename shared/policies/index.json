@@ -1,15 +1,73 @@
 {
   "default": "policy_150k.json",
   "agents": [
-    { "label": "rookie (25k steps)", "file": "policy_25k.json" },
-    { "label": "learner (75k steps)", "file": "policy_75k.json" },
-    { "label": "amateur (150k steps)", "file": "policy_150k.json" },
-    { "label": "pro (250k steps)", "file": "policy_250k.json" },
-    { "label": "champion (500k steps)", "file": "policy_500k.json" },
-    { "label": "Maverick (200k, speed reward)", "file": "policy_maverick_200k.json" },
-    { "label": "Steady (200k, clean reward)", "file": "policy_steady_200k.json" },
-    { "label": "Purist (200k, progress only)", "file": "policy_purist_200k.json" },
-    { "label": "Racer (200k, balanced reward)", "file": "policy_racer_200k.json" },
-    { "label": "Overtaker (trained in traffic)", "file": "policy_overtaker.json" }
+    {
+      "label": "rookie (25k steps)",
+      "file": "policy_25k.json"
+    },
+    {
+      "label": "learner (75k steps)",
+      "file": "policy_75k.json"
+    },
+    {
+      "label": "amateur (150k steps)",
+      "file": "policy_150k.json"
+    },
+    {
+      "label": "pro (250k steps)",
+      "file": "policy_250k.json"
+    },
+    {
+      "label": "champion (500k steps)",
+      "file": "policy_500k.json"
+    },
+    {
+      "label": "Maverick (200k, speed reward)",
+      "file": "policy_maverick_200k.json"
+    },
+    {
+      "label": "Steady (200k, clean reward)",
+      "file": "policy_steady_200k.json"
+    },
+    {
+      "label": "Purist (200k, progress only)",
+      "file": "policy_purist_200k.json"
+    },
+    {
+      "label": "Racer (200k, balanced reward)",
+      "file": "policy_racer_200k.json"
+    },
+    {
+      "label": "Overtaker (trained in traffic)",
+      "file": "policy_overtaker.json"
+    },
+    {
+      "label": "Comet (fast and clean)",
+      "file": "policy_comet.json"
+    },
+    {
+      "label": "Bulldozer (grinds along the walls)",
+      "file": "policy_bulldozer.json"
+    },
+    {
+      "label": "Firecracker (quick start, short fuse)",
+      "file": "policy_firecracker.json"
+    },
+    {
+      "label": "Magnet (irresistibly drawn to walls)",
+      "file": "policy_magnet.json"
+    },
+    {
+      "label": "Wobbles (enthusiastic but unsteady)",
+      "file": "policy_wobbles.json"
+    },
+    {
+      "label": "Moth (finds the wall like a lamp)",
+      "file": "policy_moth.json"
+    },
+    {
+      "label": "Snoozer (falls asleep on the grid)",
+      "file": "policy_snoozer.json"
+    }
   ]
 }
