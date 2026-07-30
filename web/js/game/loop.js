@@ -35,7 +35,7 @@ import { RaceManager } from "./race.js";
 const NUM_LAPS = 2;
 const MAX_SUBSTEPS = 5;
 const TOPDOWN_CAR_SCALE = 2.0;
-const MAX_AGENTS = 10;
+const MAX_AGENTS = 20;
 const HUMAN_COLOR = 0x2b6fdd;
 const LEADERBOARD_PERIOD = 0.25; // seconds between leaderboard refreshes
 
@@ -54,6 +54,14 @@ const AGENT_PALETTE = [
   0x8d9db6, // silver
   0x7a5cff, // violet
   0xff6a3d, // coral
+  0x8f5a2f, // brown
+  0xd4a017, // gold
+  0x7d1f3c, // maroon
+  0x274690, // navy
+  0x6b8f23, // olive
+  0x9be7ff, // ice blue
+  0x5b2a86, // dark violet
+  0x1f6f43, // forest
 ];
 
 function lerpState(prev, cur, alpha) {
@@ -786,7 +794,7 @@ async function main() {
           );
       car.state = stepCar(car.state, a.steer, driving ? a.throttle : 0.0, C);
     }
-    // Pairwise car-car separation (max 11 cars = 55 pairs), then walls.
+    // Pairwise car-car separation (max 21 cars = 210 pairs), then walls.
     for (let i = 0; i < cars.length; i++) {
       for (let j = i + 1; j < cars.length; j++) {
         const cc = resolveCarCar(cars[i].state, cars[j].state);
