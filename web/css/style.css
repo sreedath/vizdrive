@@ -203,7 +203,8 @@ body {
 
 /* ---- Live standings toggle ---- */
 
-#standings-btn {
+#standings-btn,
+#endrace-btn {
   position: absolute;
   left: 20px;
   bottom: 16px;
@@ -221,7 +222,13 @@ body {
   transition: transform 0.15s, box-shadow 0.15s;
 }
 
-#standings-btn:hover {
+#endrace-btn {
+  bottom: 64px;
+  color: #ff9d9d;
+}
+
+#standings-btn:hover,
+#endrace-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(77, 163, 255, 0.25);
 }

@@ -99,6 +99,16 @@ export class RaceManager {
     car.nextGate = (car.nextGate + 1) % this.gates.length;
   }
 
+  // Immediately end the race (user pressed "end race"): current order
+  // becomes the final classification, unfinished cars are marked DNF.
+  forceFinish() {
+    if (this.phase === "finished") return;
+    this.phase = "finished";
+    for (const car of this.cars.values()) {
+      if (!car.finished) car.dnf = true;
+    }
+  }
+
   everyoneFinished() {
     for (const car of this.cars.values()) {
       if (!car.finished) return false;

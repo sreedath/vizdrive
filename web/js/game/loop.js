@@ -547,6 +547,7 @@ async function main() {
     inLobby = true;
     liveStandings = false;
     standingsBtn.classList.add("hidden");
+    endRaceBtn.classList.add("hidden");
     hud.hideBanner();
     hud.hideLeaderboard();
     lidarViz.lines.visible = false;
@@ -575,6 +576,7 @@ async function main() {
       lobbyEl.classList.add("hidden");
       inLobby = false;
       standingsBtn.classList.remove("hidden");
+      endRaceBtn.classList.remove("hidden");
       music.fadeOut(1.2);
     } catch (err) {
       statusEl.textContent = `failed to start: ${err.message}`;
@@ -602,8 +604,20 @@ async function main() {
   // meant waiting for every car to finish (or DNF out). The standings
   // button opens the same table mid-race, refreshed live; the X closes it.
   const standingsBtn = document.getElementById("standings-btn");
+  const endRaceBtn = document.getElementById("endrace-btn");
   const bannerClose = document.getElementById("banner-close");
   let liveStandings = false;
+
+  // End the race on demand: current order becomes final, cars coast to a
+  // stop (throttle is cut once the phase is "finished").
+  endRaceBtn.addEventListener("click", () => {
+    if (inLobby || race.phase === "finished") return;
+    race.forceFinish();
+    bannerShown = true;
+    liveStandings = false;
+    endRaceBtn.classList.add("hidden");
+    showFinishBanner("RACE STOPPED");
+  });
 
   function renderLiveStandings() {
     const order = currentStandings();
@@ -784,7 +798,7 @@ async function main() {
     linkLines.geometry.attributes.position.needsUpdate = true;
   }
 
-  function showFinishBanner() {
+  function showFinishBanner(titleOverride = null) {
     const order = currentStandings();
     const columns = order.map((id) => {
       const car = carById(id);
@@ -800,14 +814,15 @@ async function main() {
       };
     });
     const winner = carById(order[0]);
-    const title = winner.isHuman ? "YOU WIN" : `${winner.name.toUpperCase()} WINS`;
+    const title =
+      titleOverride ??
+      (winner.isHuman ? "YOU WIN" : `${winner.name.toUpperCase()} WINS`);
     hud.showBanner(title, columns);
   }
 
   function physicsTick() {
     const controls = input.sample(C.DT);
     race.tick(C.DT);
-    const driving = race.phase !== "countdown";
 
     for (const car of cars) {
       car.prev = car.state;
@@ -817,7 +832,10 @@ async function main() {
             car.state,
             cars.filter((c) => c !== car).map((c) => c.state)
           );
-      car.state = stepCar(car.state, a.steer, driving ? a.throttle : 0.0, C);
+      // Throttle only while the race is on: cars hold still during the
+      // countdown and coast to a stop once the race is over.
+      const throttle = race.phase === "racing" ? a.throttle : 0.0;
+      car.state = stepCar(car.state, a.steer, throttle, C);
     }
     // Pairwise car-car separation (max 21 cars = 210 pairs), then walls.
     for (let i = 0; i < cars.length; i++) {
@@ -835,6 +853,7 @@ async function main() {
     if (race.phase === "finished" && !bannerShown) {
       bannerShown = true;
       liveStandings = false; // final results replace the live table
+      endRaceBtn.classList.add("hidden");
       showFinishBanner();
     }
   }
