@@ -72,7 +72,7 @@ class WallCollider:
 
 
 # Car-vs-car collision. Each car is a capsule approximated by a row of circles
-# along its heading (tail/center/nose), sized to hug the 4.2 x 2.0 body box.
+# along its heading (tail to nose), sized to hug the 4.2 x 2.0 body box.
 # Deepest-pair resolution, half the overlap each. Port of resolveCarCar in
 # web/js/sim/collision.js; the constants and math must stay identical.
 CAR_CIRCLE_OFFSETS = (-1.1, -0.55, 0.0, 0.55, 1.1)
@@ -81,7 +81,7 @@ CAR_CAR_ITERATIONS = 6
 
 
 def car_circles(x, z, heading):
-    """The 3 capsule circle centers for a car at (x, z, heading)."""
+    """The capsule circle centers for a car at (x, z, heading)."""
     fx = math.cos(heading)
     fz = math.sin(heading)
     return [(x + fx * o, z + fz * o) for o in CAR_CIRCLE_OFFSETS]
