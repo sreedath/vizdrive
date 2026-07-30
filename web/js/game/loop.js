@@ -32,7 +32,9 @@ import { Music } from "./music.js";
 import { Hud } from "./hud.js";
 import { RaceManager } from "./race.js";
 
-const NUM_LAPS = 2;
+const DEFAULT_LAPS = 2;
+const MIN_LAPS = 1;
+const MAX_LAPS = 10;
 const MAX_SUBSTEPS = 5;
 const TOPDOWN_CAR_SCALE = 2.0;
 const MAX_AGENTS = 20;
@@ -141,11 +143,15 @@ async function main() {
   let collider = new WallCollider(track, C);
   let lidar = new Lidar(track, C);
   let progress = new ProgressTracker(track);
-  let race = new RaceManager(track, NUM_LAPS);
+  // Race length is lobby-configurable (persisted); 2 laps by default.
+  let numLaps =
+    parseInt(localStorage.getItem("vizdrive-laps") ?? "", 10) || DEFAULT_LAPS;
+  numLaps = Math.max(MIN_LAPS, Math.min(MAX_LAPS, numLaps));
+  let race = new RaceManager(track, numLaps);
 
   const lidarViz = new LidarViz(scene, C, MAX_AGENTS + 1);
   const input = new Input();
-  const hud = new Hud(NUM_LAPS);
+  const hud = new Hud(numLaps);
 
   const aspect = () => window.innerWidth / window.innerHeight;
   const chaseCam = new ChaseCamera(aspect());
@@ -192,7 +198,7 @@ async function main() {
     collider = new WallCollider(track, C);
     lidar = new Lidar(track, C);
     progress = new ProgressTracker(track);
-    race = new RaceManager(track, NUM_LAPS);
+    race = new RaceManager(track, numLaps);
     const wasTop = activeCam === topCam;
     topCam = new TopDownCamera(track, aspect());
     if (wasTop) activeCam = topCam;
@@ -557,6 +563,9 @@ async function main() {
     }
     try {
       await ensureSelectedTrack();
+      // Pick up the lobby's lap setting for this race.
+      race = new RaceManager(track, numLaps);
+      hud.numLaps = numLaps;
       const entries = [];
       if (humanIn) entries.push({ name: "YOU", policyJson: null });
       for (const item of roster) {
@@ -572,6 +581,22 @@ async function main() {
       console.error("race start failed:", err);
     }
   }
+  // ---- Lap count stepper (lobby) ----
+  const lapsValueEl = document.getElementById("laps-value");
+
+  function setLaps(n) {
+    numLaps = Math.max(MIN_LAPS, Math.min(MAX_LAPS, n));
+    lapsValueEl.textContent = numLaps === 1 ? "1 lap" : `${numLaps} laps`;
+    localStorage.setItem("vizdrive-laps", String(numLaps));
+  }
+  document.getElementById("laps-minus").addEventListener("click", () => {
+    setLaps(numLaps - 1);
+  });
+  document.getElementById("laps-plus").addEventListener("click", () => {
+    setLaps(numLaps + 1);
+  });
+  setLaps(numLaps); // sync the label with the persisted value
+
   // ---- Live standings table (button-toggled, realtime) ----
   // The finish banner used to be the only place lap times appeared, which
   // meant waiting for every car to finish (or DNF out). The standings
@@ -595,7 +620,7 @@ async function main() {
         lapsCompleted: st.lapsCompleted,
         status: st.finished
           ? null
-          : `on lap ${Math.min(st.lapsCompleted + 1, NUM_LAPS)}`,
+          : `on lap ${Math.min(st.lapsCompleted + 1, numLaps)}`,
       };
     });
     hud.showBanner("LIVE STANDINGS", rows, "updating in real time");

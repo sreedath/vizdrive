@@ -638,6 +638,44 @@ body {
   margin-right: 6px;
 }
 
+#laps-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+#laps-label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+#laps-row button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+#laps-row button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+#laps-value {
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
 #lobby-upload {
   display: inline-block;
   font-size: 13px;
